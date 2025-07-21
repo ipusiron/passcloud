@@ -62,6 +62,13 @@ document.addEventListener('DOMContentLoaded', () => {
         updateFileInfo(currentFile.name);
     });
     
+    // 語幹推定モードの変更時にワードクラウドを再描画
+    document.getElementById('stemMode').addEventListener('change', () => {
+        if (wordList.length > 0 && document.querySelector("#tabs button.active").dataset.tab === "cloud") {
+            drawWordCloud();
+        }
+    });
+    
     // Check if WordCloud is loaded
     setTimeout(function() {
         if (typeof WordCloud === 'undefined') {
@@ -120,21 +127,29 @@ function processText(text) {
     // 元のファイルの行数を保存
     originalLineCount = lines.length;
     
-    const stemMode = document.getElementById('stemMode').checked;
     const freqMap = {};
 
     for (let line of lines) {
         let word = line.trim().toLowerCase();
-        if (stemMode) {
-            word = normalize(word);
-        }
         freqMap[word] = (freqMap[word] || 0) + 1;
     }
 
+    // 語幹推定を適用しない生データを保存
     wordList = Object.entries(freqMap).map(([word, count]) => [word, count]);
     console.log('Created wordList with', wordList.length, 'unique words');
     const sortedList = [...wordList].sort((a, b) => b[1] - a[1]);
     console.log('Top 5 words:', sortedList.slice(0, 5));
+    
+    // パスワードの長さ分布を確認
+    const lengthDistribution = {};
+    wordList.forEach(([word, count]) => {
+        const len = word.length;
+        if (!lengthDistribution[len]) {
+            lengthDistribution[len] = 0;
+        }
+        lengthDistribution[len] += count;
+    });
+    console.log('Length distribution:', lengthDistribution);
 }
 
 function normalize(word) {
@@ -190,9 +205,24 @@ function drawWordCloud() {
     console.log('Canvas size:', canvas.width, 'x', canvas.height, 'Scale:', scale);
     
     try {
-        console.log('Calling WordCloud with', wordList.length, 'words');
+        // 語幹推定モードのチェック
+        const stemMode = document.getElementById('stemMode').checked;
+        let displayWordList = wordList;
+        
+        if (stemMode) {
+            // 語幹推定を適用したリストを作成
+            const stemmedFreqMap = {};
+            wordList.forEach(([word, count]) => {
+                const stemmedWord = normalize(word);
+                stemmedFreqMap[stemmedWord] = (stemmedFreqMap[stemmedWord] || 0) + count;
+            });
+            displayWordList = Object.entries(stemmedFreqMap).map(([word, count]) => [word, count]);
+            console.log('Applied stemming, new list length:', displayWordList.length);
+        }
+        
+        console.log('Calling WordCloud with', displayWordList.length, 'words');
         // Sort wordList by frequency (descending) for better placement
-        const sortedWordList = [...wordList].sort((a, b) => b[1] - a[1]);
+        const sortedWordList = [...displayWordList].sort((a, b) => b[1] - a[1]);
         
         const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
         
@@ -452,6 +482,10 @@ function drawHeatmap() {
         uniquePasswords: heatmapData.uniquePasswords,
         maxCount: heatmapData.maxCount,
         lengths: heatmapData.lengths,
+        minLength: heatmapData.minLength,
+        maxLength: heatmapData.maxLength,
+        mostCommonLength: heatmapData.mostCommonLength,
+        mostCommonLengthCount: heatmapData.mostCommonLengthCount,
         matrix: heatmapData.matrix
     });
     
@@ -624,28 +658,29 @@ function calculateStatistics() {
     
     wordList.forEach(([password, count]) => {
         const len = password.length;
-        totalLength += len * count;
+        const intCount = Math.floor(count); // 整数に変換
+        totalLength += len * intCount;
         minLength = Math.min(minLength, len);
         maxLength = Math.max(maxLength, len);
         
         // 長さ別カウント
         if (!lengthMap[len]) lengthMap[len] = 0;
-        lengthMap[len] += count;
+        lengthMap[len] += intCount;
         
         // 文字種別判定
         const hasNumeric = /\d/.test(password);
         const hasAlpha = /[a-zA-Z]/.test(password);
         const hasSpecial = /[^a-zA-Z0-9]/.test(password);
         
-        if (hasNumeric && !hasAlpha && !hasSpecial) numericOnly += count;
-        else if (hasAlpha && !hasNumeric && !hasSpecial) alphaOnly += count;
-        else if (hasAlpha && hasNumeric && !hasSpecial) alphaNumeric += count;
-        else if (hasSpecial) withSpecial += count;
+        if (hasNumeric && !hasAlpha && !hasSpecial) numericOnly += intCount;
+        else if (hasAlpha && !hasNumeric && !hasSpecial) alphaOnly += intCount;
+        else if (hasAlpha && hasNumeric && !hasSpecial) alphaNumeric += intCount;
+        else if (hasSpecial) withSpecial += intCount;
         
         // パターン判定
-        if (hasSequentialPattern(password)) sequential += count;
-        if (hasKeyboardPattern(password)) keyboard += count;
-        if (hasYearPattern(password)) years += count;
+        if (hasSequentialPattern(password)) sequential += intCount;
+        if (hasKeyboardPattern(password)) keyboard += intCount;
+        if (hasYearPattern(password)) years += intCount;
     });
     
     // Top 10
@@ -654,8 +689,8 @@ function calculateStatistics() {
         .slice(0, 10)
         .map(([password, count]) => ({
             password,
-            count,
-            percentage: ((count / totalPasswords) * 100).toFixed(2)
+            count: Math.floor(count),
+            percentage: ((Math.floor(count) / totalPasswords) * 100).toFixed(2)
         }));
     
     // 長さ分布
@@ -751,8 +786,8 @@ function calculateHeatmapData() {
         { min: 101, max: Infinity, label: '100+' }
     ];
     
-    // 表示する長さの範囲を作成（最小4文字から最大20文字まで、ただし実データの範囲内）
-    const displayMinLength = Math.max(4, minLength);
+    // 表示する長さの範囲を作成（実データの最小値から最大20文字まで）
+    const displayMinLength = minLength;
     const displayMaxLength = Math.min(20, maxLength);
     const lengths = [];
     for (let i = displayMinLength; i <= displayMaxLength; i++) {
@@ -806,8 +841,19 @@ function calculateHeatmapData() {
     let actualMostCommonLengthCount = 0;
     wordList.forEach(([password, count]) => {
         if (password.length === mostCommonLength) {
-            actualMostCommonLengthCount += count;
+            actualMostCommonLengthCount += Math.floor(count); // 整数に変換
         }
+    });
+    
+    // デバッグ情報を詳細に出力
+    console.log('Heatmap calculation details:', {
+        minLength,
+        maxLength,
+        displayMinLength,
+        displayMaxLength,
+        lengthFreqMap,
+        mostCommonLength,
+        actualMostCommonLengthCount
     });
     
     return {
