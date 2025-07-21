@@ -1,0 +1,361 @@
+/* ヒートマップ関連のスタイル */
+
+.heatmap-container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    overflow-x: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.heatmap-container h2 {
+    text-align: center;
+    margin-bottom: 10px;
+    font-size: 2em;
+    color: var(--text-primary);
+}
+
+.heatmap-description {
+    text-align: center;
+    color: var(--text-secondary);
+    margin-bottom: 30px;
+    line-height: 1.6;
+}
+
+.heatmap-wrapper {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    justify-content: center;
+    margin-bottom: 30px;
+    width: 100%;
+    max-width: 800px;
+}
+
+/* Y軸 */
+.heatmap-y-axis {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    align-self: stretch;
+}
+
+.y-axis-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    color: var(--text-primary);
+    font-weight: bold;
+    padding: 10px 0;
+}
+
+.y-axis-values {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 0;
+    justify-content: space-between;
+}
+
+.y-value {
+    text-align: right;
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    padding: 0;
+    height: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 25px;
+    margin: 0;
+}
+
+/* メインエリア */
+.heatmap-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+}
+
+.heatmap-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+[data-theme="dark"] .heatmap-grid {
+    background: rgba(20, 20, 20, 0.8);
+}
+
+.heatmap-row {
+    display: grid;
+    grid-template-columns: repeat(8, 45px);
+    gap: 2px;
+    height: 25px;
+}
+
+.heatmap-cell {
+    width: 45px;
+    height: 25px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .heatmap-cell {
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+.heatmap-cell:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+}
+
+/* X軸 */
+.heatmap-x-axis {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.x-axis-values {
+    display: grid;
+    grid-template-columns: repeat(8, 45px);
+    gap: 2px;
+    padding: 0 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.x-value {
+    width: 45px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.75em;
+    transform: rotate(-45deg);
+    transform-origin: center;
+    margin-top: 10px;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.x-axis-label {
+    color: var(--text-primary);
+    font-weight: bold;
+    margin-top: 20px;
+}
+
+/* 凡例 */
+.heatmap-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    align-items: center;
+    min-width: 100px;
+}
+
+[data-theme="dark"] .heatmap-legend {
+    background: rgba(20, 20, 20, 0.8);
+}
+
+.legend-title {
+    font-weight: bold;
+    color: var(--text-primary);
+    text-align: center;
+    font-size: 0.85em;
+    line-height: 1.2;
+}
+
+.legend-scale {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.legend-gradient {
+    width: 30px;
+    height: 200px;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .legend-gradient {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.legend-max,
+.legend-min {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* サマリー */
+.heatmap-summary-wrapper {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-top: 30px;
+}
+
+.heatmap-stat-card {
+    background: var(--bg-secondary);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+    width: 100%;
+}
+
+[data-theme="dark"] .heatmap-stat-card {
+    background: rgba(40, 40, 40, 0.8);
+    box-shadow: 0 2px 10px rgba(0, 255, 255, 0.1);
+}
+
+.heatmap-stat-card h4 {
+    margin: 0 0 15px 0;
+    color: var(--text-primary);
+    font-size: 1.2em;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.3);
+    padding-bottom: 10px;
+}
+
+[data-theme="dark"] .heatmap-stat-card h4 {
+    border-bottom-color: rgba(0, 255, 255, 0.3);
+}
+
+.heatmap-stat-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="dark"] .heatmap-stat-item {
+    border-bottom-color: rgba(255, 255, 255, 0.05);
+}
+
+.heatmap-stat-item:last-child {
+    border-bottom: none;
+}
+
+/* ツールチップ */
+.heatmap-tooltip {
+    position: absolute;
+    display: none;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.heatmap-tooltip strong {
+    color: #00ffff;
+    display: block;
+    margin-bottom: 5px;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .heatmap-wrapper {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .heatmap-y-axis {
+        flex-direction: row-reverse;
+    }
+    
+    .y-axis-label {
+        writing-mode: horizontal-tb;
+        padding: 0 10px;
+    }
+    
+    .y-axis-values {
+        flex-direction: row-reverse;
+        width: 100%;
+        gap: 2px;
+        padding: 0;
+        height: auto;
+    }
+    
+    .y-axis-values-wrapper {
+        width: 100%;
+        height: auto;
+    }
+    
+    .y-value {
+        width: 30px;
+        font-size: 0.7em;
+        height: auto;
+        padding: 2px;
+    }
+    
+    .heatmap-grid {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+    
+    .heatmap-cell {
+        width: 30px;
+        height: 20px;
+    }
+    
+    .x-value {
+        width: 30px;
+        font-size: 0.7em;
+    }
+    
+    .heatmap-legend {
+        width: 100%;
+        max-width: 300px;
+    }
+    
+    .legend-title {
+        margin-bottom: 5px;
+    }
+    
+    .legend-scale {
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+    }
+    
+    .legend-gradient {
+        width: 100%;
+        height: 30px;
+        flex: 1;
+        background: linear-gradient(to right, #f5f5f5, #0000ff, #00ff00, #ffff00, #ff0000, #cc0000) !important;
+    }
+    
+    [data-theme="dark"] .legend-gradient {
+        background: linear-gradient(to right, #1a1a1a, #0000ff, #00ffff, #ff00ff, #ff0000) !important;
+    }
+    
+    .legend-max,
+    .legend-min {
+        min-width: 30px;
+    }
+}
