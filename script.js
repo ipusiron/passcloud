@@ -1,6 +1,38 @@
 let currentFile = null;
 let wordList = [];
 
+// Dark mode functionality
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    updateThemeIcon(newTheme);
+    
+    // Redraw word cloud if it exists
+    if (wordList.length > 0 && document.querySelector("#tabs button.active").dataset.tab === "cloud") {
+        drawWordCloud();
+    }
+}
+
+function updateThemeIcon(theme) {
+    const icon = document.querySelector('.theme-icon');
+    icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+}
+
+// Initialize theme on page load
+document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+});
+
 function updateFileInfo(name) {
     document.getElementById("fileInfo").textContent = `📄 読み込み対象: ${name}`;
 }
@@ -82,12 +114,23 @@ function drawWordCloud() {
     document.querySelectorAll('.viewPanel').forEach(p => p.style.display = 'none');
     document.getElementById('cloudView').style.display = 'block';
 
+    const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+    
     WordCloud(document.getElementById('cloudCanvas'), {
         list: wordList,
         gridSize: 10,
         weightFactor: 3,
-        backgroundColor: '#fff',
-        color: 'random-dark'
+        backgroundColor: 'transparent',
+        color: function() {
+            if (isDarkMode) {
+                // Bright colors for dark mode
+                const colors = ['#4fc3f7', '#81c784', '#ffb74d', '#e57373', '#ba68c8', '#64b5f6', '#aed581', '#ff8a65'];
+                return colors[Math.floor(Math.random() * colors.length)];
+            } else {
+                // Dark colors for light mode
+                return 'random-dark';
+            }
+        }
     });
 }
 
