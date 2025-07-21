@@ -1,0 +1,17 @@
+# macOS関連の不要ファイル
+.DS_Store
+
+# VSCodeなどのIDE設定
+.vscode/
+
+# 一時的なバックアップファイル
+*.log
+*.tmp
+*~
+
+# Node.js環境がある場合（npm initなどしたとき）
+node_modules/
+dist/
+
+# OSによるファイル
+Thumbs.db

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>PassCloud</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.1.0/src/wordcloud2.js"></script>
+</head>
+<body>
+    <header>
+        <h1>PassCloud</h1>
+        <p>流出パスワードや辞書ファイルをワードクラウドで可視化</p>
+    </header>
+
+    <section id="controls">
+        <div id="tabs" class="tab-buttons">
+            <button data-tab="cloud" class="active" onclick="switchView('cloud')">ワードクラウド</button>
+            <button data-tab="partial" onclick="switchView('partial')">部分一致ワードクラウド</button>
+            <button data-tab="stats" onclick="switchView('stats')">統計情報</button>
+            <button data-tab="heatmap" onclick="switchView('heatmap')">長さ×頻度ヒートマップ</button>
+        </div>
+        <div id="stemOption">
+            <label><input type="checkbox" id="stemMode"> 語幹推定モード</label>
+        </div>
+        <button id="analyzeButton" onclick="analyze()">📊 分析実行</button>
+    </section>
+
+    <div id="dropZone" class="drop-zone">
+        ここにパスワードリスト（.txt）をドラッグ＆ドロップ<br>
+        またはクリックして選択
+    </div>
+    <input type="file" id="fileInput" accept=".txt" style="display: none;">
+    <div id="fileInfo" class="file-info"></div>
+
+    <div id="loadingIndicator" class="loading" style="display:none;">🔄 処理中です…</div>
+
+    <main>
+        <div id="cloudView" class="viewPanel"><canvas id="cloudCanvas"></canvas></div>
+        <div id="partialView" class="viewPanel" style="display:none;"></div>
+        <div id="statsView" class="viewPanel" style="display:none;"></div>
+        <div id="heatmapView" class="viewPanel" style="display:none;"></div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
