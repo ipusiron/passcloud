@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>PassCloud</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://unpkg.com/wordcloud@1.1.1/src/wordcloud2.js"></script>
+    <script src="https://unpkg.com/wordcloud@1.1.1/src/wordcloud2.js" onerror="this.src='js/wordcloud2.js'"></script>
 </head>
 <body>
     <header>
@@ -48,6 +48,14 @@
         <div id="heatmapView" class="viewPanel" style="display:none;"></div>
     </main>
 
-    <script src="script.js"></script>
+    <!-- 共通ユーティリティ -->
+    <script src="js/utils.js"></script>
+    <!-- 分析モジュール -->
+    <script src="js/wordcloud-analysis.js"></script>
+    <script src="js/partial-analysis.js"></script>
+    <script src="js/stats-analysis.js"></script>
+    <script src="js/heatmap-analysis.js"></script>
+    <!-- メインアプリケーション -->
+    <script src="js/main.js"></script>
 </body>
 </html>
