@@ -190,12 +190,16 @@ class HeatmapAnalysis {
 
     // Y軸を生成
     _generateYAxis() {
+        // ヒートマップと同じ順序（大きい値から小さい値へ）で表示
+        const reversedLengths = [...this.heatmapData.lengths].reverse();
         return `
             <div class="heatmap-y-axis">
                 <div class="y-axis-label">パスワードの長さ（文字数）</div>
                 <div class="y-axis-values-wrapper">
                     <div class="y-axis-values">
-                        ${this.heatmapData.lengths.slice().reverse().map(len => `<div class="y-value">${len}</div>`).join('')}
+                        ${reversedLengths.map((len, index) => 
+                            `<div class="y-value">${len}</div>`
+                        ).join('')}
                     </div>
                 </div>
             </div>

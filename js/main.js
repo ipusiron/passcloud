@@ -55,6 +55,15 @@ class PassCloudApp {
             themeToggle.addEventListener('click', () => this.toggleTheme());
         }
         
+        // ヘルプボタン
+        const helpButton = document.getElementById('helpButton');
+        if (helpButton) {
+            helpButton.addEventListener('click', () => this.showHelpModal());
+        }
+        
+        // ヘルプモーダル関連
+        this.setupHelpModal();
+        
         // ファイル選択関連
         this.setupFileHandlers();
         
@@ -270,11 +279,68 @@ class PassCloudApp {
         }
     }
 
+    // ヘルプモーダル関連の設定
+    setupHelpModal() {
+        const helpModal = document.getElementById('helpModal');
+        const helpModalClose = document.getElementById('helpModalClose');
+        const modalOverlay = helpModal?.querySelector('.modal-overlay');
+        
+        // 閉じるボタン
+        if (helpModalClose) {
+            helpModalClose.addEventListener('click', () => this.hideHelpModal());
+        }
+        
+        // オーバーレイクリック
+        if (modalOverlay) {
+            modalOverlay.addEventListener('click', () => this.hideHelpModal());
+        }
+        
+        // ESCキーで閉じる
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && helpModal && helpModal.style.display !== 'none') {
+                this.hideHelpModal();
+            }
+        });
+    }
+
+    // ヘルプモーダルを表示
+    showHelpModal() {
+        const helpModal = document.getElementById('helpModal');
+        if (helpModal) {
+            helpModal.style.display = 'flex';
+            helpModal.classList.remove('closing');
+            // スクロール位置をリセット
+            const modalBody = helpModal.querySelector('.modal-body');
+            if (modalBody) {
+                modalBody.scrollTop = 0;
+            }
+            // ボディのスクロールを無効化
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    // ヘルプモーダルを非表示
+    hideHelpModal() {
+        const helpModal = document.getElementById('helpModal');
+        if (helpModal) {
+            helpModal.classList.add('closing');
+            setTimeout(() => {
+                helpModal.style.display = 'none';
+                helpModal.classList.remove('closing');
+                // ボディのスクロールを復元
+                document.body.style.overflow = '';
+            }, 300);
+        }
+    }
+
     // クリーンアップ
     cleanup() {
         this.wordCloudAnalysis?.cleanup();
         this.partialAnalysis?.cleanup();
         this.heatmapAnalysis?.cleanup();
+        
+        // ボディのスクロールを復元（念のため）
+        document.body.style.overflow = '';
     }
 }
 

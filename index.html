@@ -13,9 +13,14 @@
                 <h1>PassCloud</h1>
                 <p>流出パスワードや辞書ファイルをワードクラウドで可視化</p>
             </div>
-            <button id="themeToggle" class="theme-toggle" aria-label="ダークモード切替">
-                <span class="theme-icon">🌙</span>
-            </button>
+            <div class="header-buttons">
+                <button id="helpButton" class="header-button" aria-label="ヘルプ">
+                    <span class="button-icon">❓</span>
+                </button>
+                <button id="themeToggle" class="header-button" aria-label="ダークモード切替">
+                    <span class="theme-icon">🌙</span>
+                </button>
+            </div>
         </div>
     </header>
 
@@ -47,6 +52,102 @@
         <div id="statsView" class="viewPanel" style="display:none;"></div>
         <div id="heatmapView" class="viewPanel" style="display:none;"></div>
     </main>
+
+    <!-- ヘルプモーダル -->
+    <div id="helpModal" class="modal" style="display: none;">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📖 PassCloud ヘルプ</h2>
+                <button class="modal-close" id="helpModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="help-content">
+                    <section class="help-section">
+                        <h3>🌥 ワードクラウド</h3>
+                        <p>パスワードリスト内で出現頻度の高い単語を、フォントサイズと色の濃淡で可視化します。よく使われているパターンが一目で把握できます。</p>
+                        <ul>
+                            <li><strong>語幹推定モード</strong>: ONにすると、末尾の数字や記号を除去して正規化します（例：password123 → password）</li>
+                            <li><strong>色分け</strong>: 出現頻度が高いほど大きく、濃い色で表示されます</li>
+                            <li><strong>インタラクション</strong>: 単語にマウスカーソルを合わせると出現回数が表示されます</li>
+                        </ul>
+                    </section>
+
+                    <section class="help-section">
+                        <h3>🧩 部分一致ワードクラウド</h3>
+                        <p>よく使われる語幹（pass, admin, loveなど）に部分一致するパスワードを対象に、セットで使われている語句を抽出してワードクラウド表示します。</p>
+                        <ul>
+                            <li><strong>語幹リスト</strong>: 50個の一般的なパスワード語幹を使用</li>
+                            <li><strong>抽出対象</strong>: 語幹の前後に付く語句（接頭語・接尾語）</li>
+                            <li><strong>用途</strong>: 推測しやすいパスワードパターンの把握</li>
+                        </ul>
+                    </section>
+
+                    <section class="help-section">
+                        <h3>📊 統計情報</h3>
+                        <p>パスワードリスト全体の特徴を統計データとして数値で表示します。</p>
+                        <ul>
+                            <li><strong>基本統計</strong>: 総件数、ユニーク語数、重複率</li>
+                            <li><strong>長さ統計</strong>: 平均長、最短・最長文字数</li>
+                            <li><strong>文字種別</strong>: 数字のみ、英字のみ、英数字混在、特殊文字含む割合</li>
+                            <li><strong>Top 10</strong>: 最頻出パスワードランキング</li>
+                            <li><strong>パターン分析</strong>: 連続数字、キーボード配列、年号含有率</li>
+                        </ul>
+                    </section>
+
+                    <section class="help-section">
+                        <h3>🔥 長さ×頻度ヒートマップ</h3>
+                        <p>パスワードの「長さ」と「出現頻度」の関係を2次元マトリクスで可視化します。</p>
+                        <ul>
+                            <li><strong>縦軸</strong>: パスワードの文字数（4〜20文字）</li>
+                            <li><strong>横軸</strong>: 出現頻度の区間（1回、2-3回、4-5回...）</li>
+                            <li><strong>色の濃さ</strong>: その長さ・頻度に該当するユニークパスワード数</li>
+                            <li><strong>ツールチップ</strong>: セルにカーソルを合わせると詳細情報を表示</li>
+                        </ul>
+                    </section>
+
+                    <section class="help-section">
+                        <h3>📁 使用方法</h3>
+                        <ol>
+                            <li><strong>ファイル選択</strong>: パスワードリスト（.txtファイル）をドラッグ&ドロップまたはクリックで選択</li>
+                            <li><strong>分析実行</strong>: 「📊 分析実行」ボタンをクリック</li>
+                            <li><strong>結果確認</strong>: タブを切り替えて各分析結果を確認</li>
+                            <li><strong>テーマ切替</strong>: 右上のボタンでライト/ダークモードを切替</li>
+                        </ol>
+                    </section>
+
+                    <section class="help-section">
+                        <h3>📄 入力ファイル仕様</h3>
+                        <ul>
+                            <li><strong>形式</strong>: UTF-8エンコードの.txtファイル</li>
+                            <li><strong>構造</strong>: 1行に1パスワード</li>
+                            <li><strong>推奨サイズ</strong>: 最大10,000行程度（ブラウザ性能による）</li>
+                            <li><strong>サンプル</strong>: sample/passcloud_sample_1000.txtで動作確認可能</li>
+                        </ul>
+                    </section>
+
+                    <section class="help-section">
+                        <h3>🔒 プライバシーとセキュリティ</h3>
+                        <ul>
+                            <li><strong>完全クライアント側処理</strong>: アップロードされたファイルは外部サーバーに送信されません</li>
+                            <li><strong>メモリ上での処理</strong>: データはブラウザのメモリ内でのみ処理され、永続化されません</li>
+                            <li><strong>ローカル実行</strong>: インターネット接続なしでも動作します（WordCloudライブラリ除く）</li>
+                        </ul>
+                    </section>
+
+                    <section class="help-section">
+                        <h3>⚠️ 注意事項</h3>
+                        <ul>
+                            <li>大量のデータを処理する際は、ブラウザの性能により処理時間が長くなる場合があります</li>
+                            <li>メモリ不足によりブラウザがクラッシュする可能性があります</li>
+                            <li>このツールは教育・研究目的で作成されています</li>
+                            <li>パスワード分析は適切な権限の下で行ってください</li>
+                        </ul>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- 共通ユーティリティ -->
     <script src="js/utils.js"></script>

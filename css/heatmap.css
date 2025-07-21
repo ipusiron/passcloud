@@ -25,9 +25,9 @@
 }
 
 .heatmap-wrapper {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    gap: 10px;
     justify-content: center;
     margin-bottom: 30px;
     width: 100%;
@@ -36,10 +36,7 @@
 
 /* Y軸 */
 .heatmap-y-axis {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    align-self: stretch;
+    display: contents;
 }
 
 .y-axis-label {
@@ -47,28 +44,35 @@
     text-orientation: mixed;
     color: var(--text-primary);
     font-weight: bold;
-    padding: 10px 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 12px;
+}
+
+.y-axis-values-wrapper {
+    position: relative;
+    width: 30px;
 }
 
 .y-axis-values {
+    position: absolute;
+    top: 10px;
+    right: 0;
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    padding: 10px 0;
-    justify-content: space-between;
 }
 
 .y-value {
     text-align: right;
     color: var(--text-secondary);
     font-size: 0.9em;
-    padding: 0;
     height: 25px;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    min-width: 25px;
-    margin: 0;
+    margin-bottom: 2px;
+    line-height: 25px;
 }
 
 /* メインエリア */
@@ -77,6 +81,7 @@
     flex-direction: column;
     align-items: center;
     flex: 1;
+    justify-content: flex-start; /* Ensure content starts at the top */
 }
 
 .heatmap-grid {

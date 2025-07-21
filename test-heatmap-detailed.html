@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heatmap Alignment Test - Detailed</title>
+    <style>
+        :root {
+            --text-primary: #333;
+            --text-secondary: #666;
+            --bg-secondary: #f5f5f5;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #fff;
+        }
+        
+        /* Debug styles */
+        .measure-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background-color: red;
+            opacity: 0.5;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        
+        .measure-label {
+            position: absolute;
+            left: 10px;
+            top: -10px;
+            font-size: 10px;
+            color: red;
+            background: white;
+            padding: 2px 5px;
+        }
+        
+        .heatmap-wrapper {
+            position: relative;
+        }
+        
+        /* Highlight styles */
+        .y-value:nth-child(odd) {
+            background-color: rgba(255, 255, 0, 0.2);
+        }
+        
+        .heatmap-row:nth-child(odd) {
+            background-color: rgba(255, 255, 0, 0.2);
+        }
+    </style>
+    <link rel="stylesheet" href="css/heatmap.css">
+</head>
+<body>
+    <div id="heatmapView"></div>
+    
+    <button onclick="toggleMeasurementLines()">Toggle Measurement Lines</button>
+    <button onclick="showDimensions()">Show Dimensions</button>
+    
+    <script>
+        let measurementLinesVisible = false;
+        
+        function generateTestHeatmap() {
+            const rowsCount = 10;
+            const lengths = [];
+            for (let i = 5; i <= 14; i++) {
+                lengths.push(i);
+            }
+            
+            const html = `
+                <div class="heatmap-container">
+                    <h2>Test Heatmap Alignment - Detailed</h2>
+                    <p class="heatmap-description">Yellow highlights show alternating rows for alignment check</p>
+                    
+                    <div class="heatmap-wrapper" id="heatmapWrapper">
+                        <!-- Y-axis -->
+                        <div class="heatmap-y-axis" id="yAxis">
+                            <div class="y-axis-label">Password Length</div>
+                            <div class="y-axis-values-wrapper">
+                                <div class="y-axis-values" id="yAxisValues" style="--rows-count: ${rowsCount}">
+                                    ${lengths.reverse().map((len, i) => `
+                                        <div class="y-value" data-row="${i}">${len}</div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Main heatmap -->
+                        <div class="heatmap-main">
+                            <div class="heatmap-grid" id="heatmapGrid">
+                                ${generateRows(rowsCount)}
+                            </div>
+                            
+                            <div class="heatmap-x-axis">
+                                <div class="x-axis-values">
+                                    ${Array(8).fill(0).map((_, i) => `<div class="x-value">${i+1}</div>`).join('')}
+                                </div>
+                                <div class="x-axis-label">Frequency</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('heatmapView').innerHTML = html;
+        }
+        
+        function generateRows(count) {
+            let html = '';
+            for (let i = 0; i < count; i++) {
+                html += `<div class="heatmap-row" data-row="${i}">`;
+                for (let j = 0; j < 8; j++) {
+                    const intensity = Math.random();
+                    const color = `hsl(200, 70%, ${30 + intensity * 40}%)`;
+                    html += `<div class="heatmap-cell" style="background-color: ${color};" title="Row ${i}, Col ${j}"></div>`;
+                }
+                html += '</div>';
+            }
+            return html;
+        }
+        
+        function toggleMeasurementLines() {
+            measurementLinesVisible = !measurementLinesVisible;
+            
+            if (measurementLinesVisible) {
+                addMeasurementLines();
+            } else {
+                removeMeasurementLines();
+            }
+        }
+        
+        function addMeasurementLines() {
+            const wrapper = document.getElementById('heatmapWrapper');
+            const yValues = document.querySelectorAll('.y-value');
+            const rows = document.querySelectorAll('.heatmap-row');
+            
+            yValues.forEach((yValue, index) => {
+                const yRect = yValue.getBoundingClientRect();
+                const wrapperRect = wrapper.getBoundingClientRect();
+                
+                // Add line at the middle of Y-axis value
+                const line = document.createElement('div');
+                line.className = 'measure-line';
+                line.style.top = (yRect.top + yRect.height / 2 - wrapperRect.top) + 'px';
+                line.innerHTML = `<span class="measure-label">Y${index}: ${yValue.textContent}</span>`;
+                wrapper.appendChild(line);
+                
+                // Add line for corresponding heatmap row if it exists
+                if (rows[index]) {
+                    const rowRect = rows[index].getBoundingClientRect();
+                    const rowLine = document.createElement('div');
+                    rowLine.className = 'measure-line';
+                    rowLine.style.top = (rowRect.top + rowRect.height / 2 - wrapperRect.top) + 'px';
+                    rowLine.style.backgroundColor = 'blue';
+                    rowLine.innerHTML = `<span class="measure-label" style="color: blue; left: 200px;">Row${index}</span>`;
+                    wrapper.appendChild(rowLine);
+                }
+            });
+        }
+        
+        function removeMeasurementLines() {
+            const lines = document.querySelectorAll('.measure-line');
+            lines.forEach(line => line.remove());
+        }
+        
+        function showDimensions() {
+            const yAxisValues = document.getElementById('yAxisValues');
+            const heatmapGrid = document.getElementById('heatmapGrid');
+            const yValues = document.querySelectorAll('.y-value');
+            const rows = document.querySelectorAll('.heatmap-row');
+            
+            console.log('=== Dimensions Analysis ===');
+            console.log('Y-axis values container:', {
+                height: yAxisValues.offsetHeight,
+                computedHeight: window.getComputedStyle(yAxisValues).height,
+                padding: window.getComputedStyle(yAxisValues).padding,
+                gap: window.getComputedStyle(yAxisValues).gap
+            });
+            
+            console.log('Heatmap grid container:', {
+                height: heatmapGrid.offsetHeight,
+                computedHeight: window.getComputedStyle(heatmapGrid).height,
+                padding: window.getComputedStyle(heatmapGrid).padding,
+                gap: window.getComputedStyle(heatmapGrid).gap
+            });
+            
+            console.log('Individual Y-values:', {
+                count: yValues.length,
+                firstHeight: yValues[0]?.offsetHeight,
+                lastHeight: yValues[yValues.length - 1]?.offsetHeight
+            });
+            
+            console.log('Individual rows:', {
+                count: rows.length,
+                firstHeight: rows[0]?.offsetHeight,
+                lastHeight: rows[rows.length - 1]?.offsetHeight
+            });
+            
+            // Calculate positions
+            console.log('\n=== Position Analysis ===');
+            yValues.forEach((yValue, i) => {
+                const yRect = yValue.getBoundingClientRect();
+                const rowRect = rows[i]?.getBoundingClientRect();
+                
+                if (rowRect) {
+                    console.log(`Item ${i}:`, {
+                        yValue: yValue.textContent,
+                        yTop: yRect.top,
+                        yMiddle: yRect.top + yRect.height / 2,
+                        rowTop: rowRect.top,
+                        rowMiddle: rowRect.top + rowRect.height / 2,
+                        alignment: Math.abs((yRect.top + yRect.height / 2) - (rowRect.top + rowRect.height / 2)) < 1 ? '✓ ALIGNED' : `✗ OFF BY ${Math.abs((yRect.top + yRect.height / 2) - (rowRect.top + rowRect.height / 2))}px`
+                    });
+                }
+            });
+        }
+        
+        // Generate test heatmap on load
+        window.addEventListener('load', () => {
+            generateTestHeatmap();
+            // Auto-show dimensions after a short delay
+            setTimeout(showDimensions, 100);
+        });
+    </script>
+</body>
+</html>

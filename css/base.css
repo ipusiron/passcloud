@@ -92,22 +92,7 @@ header p {
 }
 
 /* テーマトグル */
-.theme-toggle {
-    position: absolute;
-    right: 0;
-    background: transparent;
-    border: 2px solid var(--text-header);
-    color: var(--text-header);
-    padding: 0.5em 1em;
-    cursor: pointer;
-    border-radius: 20px;
-    font-size: 1.2em;
-    transition: all 0.3s ease;
-}
-
-.theme-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
+/* ヘッダーボタンのスタイルはmodal.cssに移動 */
 
 /* コントロールパネル */
 #controls {
