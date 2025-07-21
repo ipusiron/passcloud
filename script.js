@@ -292,7 +292,137 @@ function drawStats() {
     document.querySelectorAll('.viewPanel').forEach(p => p.style.display = 'none');
     const panel = document.getElementById('statsView');
     panel.style.display = 'block';
-    panel.innerHTML = "<p>📊 統計情報（未実装）</p>";
+    
+    if (wordList.length === 0) {
+        panel.innerHTML = '<p style="text-align: center; margin-top: 50px;">データがありません。ファイルを選択して分析を実行してください。</p>';
+        return;
+    }
+    
+    // 統計データを計算
+    const stats = calculateStatistics();
+    
+    // HTMLを生成
+    const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+    const html = `
+        <div class="stats-container">
+            <h2>📊 パスワード統計情報</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>基本統計</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">総パスワード数:</span>
+                        <span class="stat-value">${stats.totalPasswords.toLocaleString()}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">ユニークパスワード数:</span>
+                        <span class="stat-value">${stats.uniquePasswords.toLocaleString()}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">重複率:</span>
+                        <span class="stat-value">${stats.duplicateRate}%</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>長さ統計</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">平均長:</span>
+                        <span class="stat-value">${stats.avgLength}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">最短:</span>
+                        <span class="stat-value">${stats.minLength} 文字</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">最長:</span>
+                        <span class="stat-value">${stats.maxLength} 文字</span>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <h3>文字種別</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">数字のみ:</span>
+                        <span class="stat-value">${stats.numericOnly}%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">英字のみ:</span>
+                        <span class="stat-value">${stats.alphaOnly}%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">英数字混在:</span>
+                        <span class="stat-value">${stats.alphaNumeric}%</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">特殊文字含む:</span>
+                        <span class="stat-value">${stats.withSpecial}%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stats-section">
+                <h3>🏆 Top 10 パスワード</h3>
+                <div class="top-passwords">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>順位</th>
+                                <th>パスワード</th>
+                                <th>出現回数</th>
+                                <th>割合</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${stats.top10.map((item, index) => `
+                                <tr>
+                                    <td class="rank">${index + 1}</td>
+                                    <td class="password">${escapeHtml(item.password)}</td>
+                                    <td class="count">${item.count.toLocaleString()}</td>
+                                    <td class="percentage">${item.percentage}%</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="stats-section">
+                <h3>📏 長さ別分布</h3>
+                <div class="length-distribution">
+                    ${stats.lengthDistribution.map(item => `
+                        <div class="dist-row">
+                            <span class="dist-label">${item.length}文字:</span>
+                            <div class="dist-bar-container">
+                                <div class="dist-bar" style="width: ${item.percentage}%; background: ${getBarColor(item.percentage, isDarkMode)}"></div>
+                            </div>
+                            <span class="dist-value">${item.count} (${item.percentage}%)</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div class="stats-section">
+                <h3>🔍 パターン分析</h3>
+                <div class="pattern-analysis">
+                    <div class="pattern-item">
+                        <span class="pattern-label">連続数字 (123, 111等):</span>
+                        <span class="pattern-value">${stats.patterns.sequential}%</span>
+                    </div>
+                    <div class="pattern-item">
+                        <span class="pattern-label">キーボード配列 (qwerty等):</span>
+                        <span class="pattern-value">${stats.patterns.keyboard}%</span>
+                    </div>
+                    <div class="pattern-item">
+                        <span class="pattern-label">年号含む (2023, 1990等):</span>
+                        <span class="pattern-value">${stats.patterns.years}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    panel.innerHTML = html;
 }
 
 function drawHeatmap() {
@@ -339,4 +469,136 @@ function showLoading(message = "処理中です…") {
 
 function hideLoading() {
     document.getElementById("loadingIndicator").style.display = "none";
+}
+
+// HTMLエスケープ関数
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// バーの色を取得
+function getBarColor(percentage, isDarkMode) {
+    if (isDarkMode) {
+        if (percentage > 20) return '#ff1493';
+        if (percentage > 10) return '#ffd700';
+        if (percentage > 5) return '#00ffff';
+        return '#00ff00';
+    } else {
+        if (percentage > 20) return '#dc143c';
+        if (percentage > 10) return '#ff8c00';
+        if (percentage > 5) return '#4682b4';
+        return '#228b22';
+    }
+}
+
+// 統計情報を計算
+function calculateStatistics() {
+    const totalPasswords = wordList.reduce((sum, [_, count]) => sum + count, 0);
+    const uniquePasswords = wordList.length;
+    
+    // 長さ統計
+    let totalLength = 0;
+    let minLength = Infinity;
+    let maxLength = 0;
+    const lengthMap = {};
+    
+    // 文字種別統計
+    let numericOnly = 0;
+    let alphaOnly = 0;
+    let alphaNumeric = 0;
+    let withSpecial = 0;
+    
+    // パターン統計
+    let sequential = 0;
+    let keyboard = 0;
+    let years = 0;
+    
+    wordList.forEach(([password, count]) => {
+        const len = password.length;
+        totalLength += len * count;
+        minLength = Math.min(minLength, len);
+        maxLength = Math.max(maxLength, len);
+        
+        // 長さ別カウント
+        if (!lengthMap[len]) lengthMap[len] = 0;
+        lengthMap[len] += count;
+        
+        // 文字種別判定
+        const hasNumeric = /\d/.test(password);
+        const hasAlpha = /[a-zA-Z]/.test(password);
+        const hasSpecial = /[^a-zA-Z0-9]/.test(password);
+        
+        if (hasNumeric && !hasAlpha && !hasSpecial) numericOnly += count;
+        else if (hasAlpha && !hasNumeric && !hasSpecial) alphaOnly += count;
+        else if (hasAlpha && hasNumeric && !hasSpecial) alphaNumeric += count;
+        else if (hasSpecial) withSpecial += count;
+        
+        // パターン判定
+        if (hasSequentialPattern(password)) sequential += count;
+        if (hasKeyboardPattern(password)) keyboard += count;
+        if (hasYearPattern(password)) years += count;
+    });
+    
+    // Top 10
+    const top10 = wordList
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([password, count]) => ({
+            password,
+            count,
+            percentage: ((count / totalPasswords) * 100).toFixed(2)
+        }));
+    
+    // 長さ分布
+    const lengthDistribution = Object.entries(lengthMap)
+        .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
+        .map(([length, count]) => ({
+            length: parseInt(length),
+            count,
+            percentage: ((count / totalPasswords) * 100).toFixed(1)
+        }));
+    
+    return {
+        totalPasswords,
+        uniquePasswords,
+        duplicateRate: (((totalPasswords - uniquePasswords) / totalPasswords) * 100).toFixed(1),
+        avgLength: (totalLength / totalPasswords).toFixed(1),
+        minLength,
+        maxLength,
+        numericOnly: ((numericOnly / totalPasswords) * 100).toFixed(1),
+        alphaOnly: ((alphaOnly / totalPasswords) * 100).toFixed(1),
+        alphaNumeric: ((alphaNumeric / totalPasswords) * 100).toFixed(1),
+        withSpecial: ((withSpecial / totalPasswords) * 100).toFixed(1),
+        top10,
+        lengthDistribution,
+        patterns: {
+            sequential: ((sequential / totalPasswords) * 100).toFixed(1),
+            keyboard: ((keyboard / totalPasswords) * 100).toFixed(1),
+            years: ((years / totalPasswords) * 100).toFixed(1)
+        }
+    };
+}
+
+// パターン検出関数
+function hasSequentialPattern(password) {
+    const patterns = ['123', '234', '345', '456', '567', '678', '789', '890',
+                     '111', '222', '333', '444', '555', '666', '777', '888', '999', '000',
+                     'abc', 'bcd', 'cde', 'def', 'efg', 'fgh', 'ghi', 'hij', 'ijk',
+                     'jkl', 'klm', 'lmn', 'mno', 'nop', 'opq', 'pqr', 'qrs', 'rst',
+                     'stu', 'tuv', 'uvw', 'vwx', 'wxy', 'xyz'];
+    return patterns.some(pattern => password.toLowerCase().includes(pattern));
+}
+
+function hasKeyboardPattern(password) {
+    const patterns = ['qwerty', 'qwertz', 'azerty', 'qwer', 'asdf', 'zxcv',
+                     'qaz', 'wsx', 'edc', 'rfv', 'tgb', 'yhn', 'ujm',
+                     'wasd', 'asd', 'zxc'];
+    return patterns.some(pattern => password.toLowerCase().includes(pattern));
+}
+
+function hasYearPattern(password) {
+    // 1900-2099の年号を検出
+    return /19\d{2}|20\d{2}/.test(password);
 }
