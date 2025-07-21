@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <title>PassCloud</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.1.0/src/wordcloud2.js"></script>
+    <script src="https://unpkg.com/wordcloud@1.1.1/src/wordcloud2.js"></script>
 </head>
 <body>
     <header>
@@ -42,7 +42,7 @@
     <div id="loadingIndicator" class="loading" style="display:none;">🔄 処理中です…</div>
 
     <main>
-        <div id="cloudView" class="viewPanel"><canvas id="cloudCanvas"></canvas></div>
+        <div id="cloudView" class="viewPanel" style="display:block;"><canvas id="cloudCanvas"></canvas></div>
         <div id="partialView" class="viewPanel" style="display:none;"></div>
         <div id="statsView" class="viewPanel" style="display:none;"></div>
         <div id="heatmapView" class="viewPanel" style="display:none;"></div>

@@ -1,4 +1,4 @@
-# PassCloud - 流出パスワードの分析ツール
+# PassCloud - パスワードのワードクラウド可視化ツール
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/ipusiron/passcloud?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/ipusiron/passcloud?style=social)
