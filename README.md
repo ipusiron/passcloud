@@ -1,4 +1,9 @@
-# PassCloud
+# PassCloud - 流出パスワードの分析ツール
+
+![GitHub Repo stars](https://img.shields.io/github/stars/ipusiron/passcloud?style=social)
+![GitHub forks](https://img.shields.io/github/forks/ipusiron/passcloud?style=social)
+![GitHub last commit](https://img.shields.io/github/last-commit/ipusiron/passcloud)
+![GitHub license](https://img.shields.io/github/license/ipusiron/passcloud)
 
 **Day19 - 生成AIで作るセキュリティツール100**
 
@@ -87,13 +92,14 @@ PassCloud は、流出パスワードや辞書ファイルを対象に、さま�
 
 ## 🚀 使い方
 1. `index.html` をブラウザーで開くか、デモページにアクセスする。
-2. パスワードリストをアップロード or 貼り付け。
+2. パスワードリストをアップロード or 貼り付けする。
 3. 表示切替タブでワードクラウド／統計／ヒートマップなどを閲覧する。
 
 ---
-## 🔧 分析対象のパスワードファイルを準備する *発展編*
+## 🔧 分析対象のパスワードファイルを準備する 【発展編】
 
 インターネットで配布されているパスワードファイルの多くは、すでに整形（ソート・重複カット）済みの場合がほとんどです。
+なぜなら、整形することでファイル容量が減り、辞書攻撃のためには整形後のほうが使い勝手がよいためです。
 
 整形済みのパスワードファイルや辞書ファイルも本ツールで分析できますが、主要機能であるワードクラウドは十分に機能しません。
 これは、重複語が除去されているためです。
