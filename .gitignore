@@ -15,3 +15,6 @@ dist/
 
 # OSによるファイル
 Thumbs.db
+
+# Claude
+.claude/
