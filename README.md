@@ -1,3 +1,40 @@
+<!--
+---
+id: day019
+slug: passcloud
+
+title: "PassCloud"
+
+subtitle_ja: "パスワードのワードクラウド可視化ツール"
+subtitle_en: "Password Word Cloud Visualization Tool"
+
+description_ja: "流出パスワードや辞書ファイルをワードクラウド、統計情報、ヒートマップで可視化・分析するWebツール"
+description_en: "A web tool for visualizing and analyzing leaked passwords and dictionary files using word clouds, statistics, and heatmaps"
+
+category_ja:
+  - パスワード分析
+  - 認証
+category_en:
+  - Password Analysis
+  - Authentication
+
+difficulty: 1
+
+tags:
+  - wordcloud
+  - password
+  - visualization
+  - statistics
+  - heatmap
+  - client-side
+
+repo_url: "https://github.com/ipusiron/passcloud"
+demo_url: "https://ipusiron.github.io/passcloud/"
+
+hub: true
+---
+-->
+
 # PassCloud - パスワードのワードクラウド可視化ツール
 
 ![GitHub Repo stars](https://img.shields.io/github/stars/ipusiron/passcloud?style=social)
@@ -5,7 +42,7 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/ipusiron/passcloud)
 ![GitHub license](https://img.shields.io/github/license/ipusiron/passcloud)
 
-**Day19 - 生成AIで作るセキュリティツール100**
+**Day019 - 生成AIで作るセキュリティツール100**
 
 **PassCloud** は、流出したパスワードリストや辞書ファイルを対象に、ワードクラウドで可視化するツールです。パスワードの傾向を視覚的に分析できます。
 
