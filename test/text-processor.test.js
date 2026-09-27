@@ -60,11 +60,9 @@ test('color indices clamp correctly above 100 and above maximum', () => {
 
 test('drawing options deep-copy tuples even when shrinkToFit mutates them', () => {
     const vm = require('node:vm');
-    const context = vm.createContext({
-        PassCloudText: { colorIndex },
-        PassCloudUtils: { getColorScheme: () => ({ light: ['#000'], dark: ['#fff'] }) }
-    });
-    for (const file of ['wordcloud-analysis.js', 'partial-analysis.js']) {
+    const context = vm.createContext({ PassCloudText: { colorIndex } });
+    // フォントサイズの上下限を utils.js が持つので、本物を読み込む。
+    for (const file of ['utils.js', 'wordcloud-analysis.js', 'partial-analysis.js']) {
         vm.runInContext(fs.readFileSync(path.join(root, 'js', file), 'utf8'), context);
     }
     const source = Object.freeze([Object.freeze(['example', 300])]);

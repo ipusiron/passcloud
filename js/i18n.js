@@ -44,8 +44,19 @@ const I18n = (() => {
         'status.done': '分析が完了しました。',
         'status.cloudAreaFailed': 'ワードクラウドの描画領域を用意できませんでした。',
         'status.cloudDrawFailed': 'ワードクラウドを描画できませんでした。',
+        'status.cloudNothingDrawn':
+            'ワードクラウドに1語も入りませんでした。'
+            + '語が多すぎるか、描画領域が小さすぎます。',
+        'status.cloudPartlyDrawn':
+            '{total}語のうち{drawn}語を描きました。入りきらなかった語は省いています。',
         'status.partialAreaFailed': '部分一致ワードクラウドの描画領域を用意できませんでした。',
         'status.partialDrawFailed': '部分一致ワードクラウドを描画できませんでした。',
+        'status.partialNothingDrawn':
+            '部分一致ワードクラウドに1語句も入りませんでした。'
+            + '語句が多すぎるか、描画領域が小さすぎます。',
+        'status.partialPartlyDrawn':
+            '{total}語句のうち{drawn}語句を描きました。'
+            + '入りきらなかった語句は省いています。',
 
         'view.noData': 'データがありません。ファイルを選択して分析を実行してください。',
 
@@ -240,8 +251,18 @@ const I18n = (() => {
         'status.done': 'The analysis is finished.',
         'status.cloudAreaFailed': 'The drawing area for the word cloud could not be prepared.',
         'status.cloudDrawFailed': 'The word cloud could not be drawn.',
+        'status.cloudNothingDrawn':
+            'No word fitted in the word cloud.'
+            + ' There are too many words, or the drawing area is too small.',
+        'status.cloudPartlyDrawn':
+            '{drawn} of {total} words were drawn. The ones that did not fit were left out.',
         'status.partialAreaFailed': 'The drawing area for the partial-match word cloud could not be prepared.',
         'status.partialDrawFailed': 'The partial-match word cloud could not be drawn.',
+        'status.partialNothingDrawn':
+            'No phrase fitted in the partial-match word cloud.'
+            + ' There are too many phrases, or the drawing area is too small.',
+        'status.partialPartlyDrawn':
+            '{drawn} of {total} phrases were drawn. The ones that did not fit were left out.',
 
         'view.noData': 'No data yet. Choose a file and run the analysis.',
 

@@ -76,7 +76,8 @@ passcloud/                             # アプリケーションのルート
 │   ├── partial.test.js                # 部分一致の抽出結果と件数を検証する
 │   ├── readme.test.js                 # README の表と数値をコードで再計算して突き合わせる
 │   ├── stats.test.js                  # 統計の数値と Top10 の並びを検証する
-│   └── text-processor.test.js         # 取り込みと語幹推定の境界値を検証する
+│   ├── text-processor.test.js         # 取り込みと語幹推定の境界値を検証する
+│   └── wordcloud-scale.test.js        # フォントサイズの上下限と、描けなかったときの知らせを検証する
 ├── .gitignore                         # Git の除外設定
 ├── .nojekyll                          # GitHub Pages の Jekyll 処理を無効にする
 ├── CLAUDE.md                          # AI 向けの開発ガイド（構成と守ること）

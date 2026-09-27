@@ -278,6 +278,23 @@ The CSP limits scripts, styles and fonts to the same origin and forbids network 
 `referrer` is `no-referrer`.
 Note that `frame-ancestors` cannot be applied through a meta element.
 
+## 📏 Font size in the word cloud
+
+A word is sized in proportion to how often it appears, but the size is clipped at both ends.
+
+wordcloud2 measures each word on an offscreen canvas three times as tall as the font size,
+and reads its shape back with `getImageData`.
+Once that canvas grows too large, Chrome drops its contents without raising anything.
+So the upper clip keeps the area under 2^28 pixels even for the longest word in the list,
+and the height of the drawing area caps it further.
+
+The lower clip exists because wordcloud2 draws nothing at or below `minSize`.
+Without it, a word that appears once disappears in silence (in a dictionary file with the duplicates removed, that is every word).
+Words appearing twice or more keep exactly the size they had.
+
+The number of words actually placed is counted through `wordclouddrawn`,
+and the status line says so when none of them fitted, or when some were left out.
+
 ## ⚠️ Cautions
 
 - This tool is built for education and research. Confirm that you are allowed to analyze the file.
@@ -291,6 +308,7 @@ GitHub Actions runs the same tests on every push and pull request.
 Besides the counts for the bundled sample and the boundary cases, the tables, the examples, the images and the directory tree in the README are all verified.
 `test/i18n.test.js` checks that the two dictionaries hold the same keys and that no Japanese was left untranslated in the HTML.
 `test/control-chars.test.js` checks the substitution and that every place printing the input goes through it.
+`test/wordcloud-scale.test.js` checks the font-size clipping and that a reason is shown when no word could be drawn.
 
 ## 🔗 Related book
 
@@ -352,7 +370,8 @@ passcloud/                             # the root of the application
 │   ├── partial.test.js                # checks the partial-match results and their counts
 │   ├── readme.test.js                 # recomputes the tables and numbers in the README
 │   ├── stats.test.js                  # checks the statistics and the order of the top 10
-│   └── text-processor.test.js         # checks the boundaries of loading and stem estimation
+│   ├── text-processor.test.js         # checks the boundaries of loading and stem estimation
+│   └── wordcloud-scale.test.js        # checks the font-size clipping and the notice when nothing was drawn
 ├── .gitignore                         # the Git ignore list
 ├── .nojekyll                          # turns Jekyll off on GitHub Pages
 ├── CLAUDE.md                          # the guide for AI (structure and the rules to keep)

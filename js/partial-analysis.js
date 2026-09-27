@@ -1,5 +1,9 @@
 // 部分一致ワードクラウド分析モジュール
 class PartialAnalysis {
+    // こちらの minSize は10。出現1回の8pxが捨てられていたので、
+    // minSize より大きく、出現2回の約14pxより小さい位置に置く。
+    static MIN_FONT_SIZE = 12;
+
     constructor(wordList) {
         this.wordList = wordList;
         this.canvas = null;
@@ -9,6 +13,8 @@ class PartialAnalysis {
         this.retryTimer = null;
         // ホバー中の語句と件数。訳文ではなく値を覚える。
         this.hovered = null;
+        // 描画の監視を外すための後始末。
+        this.unwatch = null;
     }
 
     // キャンバスを保持し、メッセージだけを切り替える。
@@ -57,6 +63,9 @@ class PartialAnalysis {
             // 背景を描画
             this._drawBackground(ctx, rect, isDarkMode);
             
+            // 何語句描けたかを数える。描く前に仕掛ける。
+            this._watchDrawing(this.partialData.length);
+            
             // WordCloudを描画
             WordCloud(this.canvas, options);
         } catch (error) {
@@ -82,12 +91,15 @@ class PartialAnalysis {
         
         const maxWeight = Math.max(...this.partialData.map(([, count]) => count));
         const counts = new Map(this.partialData);
+        // 上限は、いちばん長い語句でもオフスクリーンcanvasが
+        // 壊れないところに置く。
+        const longest = this.partialData.reduce((max, [word]) => Math.max(max, word.length), 1);
+        const ceiling = PassCloudUtils.maxFontSize(longest, this.canvasSetup?.rect.height);
         return {
             list: this.partialData.map(([word, count]) => [word, count]),
             gridSize: 6,
-            weightFactor: function(size) {
-                return Math.pow(size, 0.8) * 8;
-            },
+            weightFactor: weight => PassCloudUtils.clampFontSize(weight, Math.pow(weight, 0.8) * 8,
+                PartialAnalysis.MIN_FONT_SIZE, ceiling),
             fontFamily: '"Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif',
             fontWeight: 'bold',
             color: function(word, weight, fontSize) {
@@ -153,6 +165,31 @@ class PartialAnalysis {
         this.wordList = wordList;
     }
 
+    // wordcloud2 は語句ごとに wordclouddrawn を送る。描けた数を数え、
+    // 1語句も描けなかったときと欠けたときに理由を出す。
+    _watchDrawing(total) {
+        this._stopWatching();
+        const canvas = this.canvas;
+        let drawn = 0;
+        const onDrawn = event => { if (event.detail.drawn) drawn += 1; };
+        const onStop = () => {
+            this._stopWatching();
+            if (drawn === 0) PassCloudUtils.notify('status.partialNothingDrawn');
+            else if (drawn < total) PassCloudUtils.notify('status.partialPartlyDrawn', { drawn, total });
+        };
+        this.unwatch = () => {
+            canvas.removeEventListener('wordclouddrawn', onDrawn);
+            canvas.removeEventListener('wordcloudstop', onStop);
+            this.unwatch = null;
+        };
+        canvas.addEventListener('wordclouddrawn', onDrawn);
+        canvas.addEventListener('wordcloudstop', onStop);
+    }
+
+    _stopWatching() {
+        if (this.unwatch) this.unwatch();
+    }
+
     // canvasの title は再描画で差し替わらないので、
     // 言語を切り替えたらここから組み直す。
     renderHoverTitle() {
@@ -170,6 +207,7 @@ class PartialAnalysis {
     // クリーンアップ
     cleanup() {
         clearTimeout(this.retryTimer);
+        this._stopWatching();
         this.retryCount = 0;
         this.hovered = null;
         if (this.canvas) {
