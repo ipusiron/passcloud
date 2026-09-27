@@ -26,7 +26,7 @@
 
 .heatmap-wrapper {
     display: grid;
-    grid-template-columns: auto auto 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 10px;
     justify-content: center;
     margin-bottom: 30px;
@@ -234,7 +234,7 @@
     box-shadow: 0 2px 10px rgba(0, 255, 255, 0.1);
 }
 
-.heatmap-stat-card h4 {
+.heatmap-stat-card h3 {
     margin: 0 0 15px 0;
     color: var(--text-primary);
     font-size: 1.2em;
@@ -242,7 +242,7 @@
     padding-bottom: 10px;
 }
 
-[data-theme="dark"] .heatmap-stat-card h4 {
+[data-theme="dark"] .heatmap-stat-card h3 {
     border-bottom-color: rgba(0, 255, 255, 0.3);
 }
 
@@ -281,86 +281,63 @@
     margin-bottom: 5px;
 }
 
-/* レスポンシブ対応 */
+
+/* 表のセルは件数を表示し、フォーカスでも詳細を読める。 */
+.heatmap-main {
+    min-width: 0;
+    overflow-x: auto;
+    align-items: stretch;
+}
+
+.heatmap-grid {
+    display: table;
+    border-spacing: 2px;
+    width: 100%;
+    min-width: 530px;
+}
+
+.heatmap-grid th {
+    padding: 6px;
+    font-size: 0.85rem;
+}
+
+.heatmap-cell {
+    text-align: center;
+    min-width: 44px;
+    height: 44px;
+}
+
+.heatmap-count {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+    border-radius: 3px;
+    padding: 1px 4px;
+}
+
+.heatmap-tooltip {
+    max-width: min(320px, 90vw);
+}
+
 @media (max-width: 768px) {
+    .heatmap-container {
+        padding: 8px;
+        align-items: stretch;
+    }
+
+    .heatmap-container h2 {
+        font-size: 1.5rem;
+    }
+
     .heatmap-wrapper {
-        flex-direction: column;
-        gap: 10px;
+        grid-template-columns: minmax(0, 1fr);
     }
-    
-    .heatmap-y-axis {
-        flex-direction: row-reverse;
+
+    .heatmap-stat-item {
+        gap: 8px;
+        flex-wrap: wrap;
     }
-    
-    .y-axis-label {
-        writing-mode: horizontal-tb;
-        padding: 0 10px;
-    }
-    
-    .y-axis-values {
-        flex-direction: row-reverse;
-        width: 100%;
-        gap: 2px;
-        padding: 0;
-        height: auto;
-    }
-    
-    .y-axis-values-wrapper {
-        width: 100%;
-        height: auto;
-    }
-    
-    .y-value {
-        width: 30px;
-        font-size: 0.7em;
-        height: auto;
-        padding: 2px;
-    }
-    
-    .heatmap-grid {
-        overflow-x: auto;
-        max-width: 100%;
-    }
-    
-    .heatmap-cell {
-        width: 30px;
-        height: 20px;
-    }
-    
-    .x-value {
-        width: 30px;
-        font-size: 0.7em;
-    }
-    
-    .heatmap-legend {
-        width: 100%;
-        max-width: 300px;
-    }
-    
-    .legend-title {
-        margin-bottom: 5px;
-    }
-    
-    .legend-scale {
-        flex-direction: row;
-        align-items: center;
-        gap: 10px;
-        width: 100%;
-    }
-    
+
     .legend-gradient {
-        width: 100%;
-        height: 30px;
-        flex: 1;
-        background: linear-gradient(to right, #f5f5f5, #0000ff, #00ff00, #ffff00, #ff0000, #cc0000) !important;
-    }
-    
-    [data-theme="dark"] .legend-gradient {
-        background: linear-gradient(to right, #1a1a1a, #0000ff, #00ffff, #ff00ff, #ff0000) !important;
-    }
-    
-    .legend-max,
-    .legend-min {
-        min-width: 30px;
+        height: 100px;
     }
 }

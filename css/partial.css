@@ -64,3 +64,26 @@
     box-shadow: 0 8px 40px rgba(255, 20, 147, 0.2), 
                 0 0 80px rgba(0, 255, 255, 0.1);
 }
+#partialCloudCanvas-container {
+    width: 100%;
+    position: relative;
+}
+
+@media (max-width: 768px) {
+    .partial-container, #partialCloudCanvas-container {
+        padding: 8px;
+        min-width: 0;
+    }
+
+    .partial-container h2 {
+        font-size: 1.5rem;
+    }
+
+    #partialCloudCanvas {
+        height: min(70dvh, 600px);
+    }
+
+    .partial-info {
+        overflow-wrap: anywhere;
+    }
+}

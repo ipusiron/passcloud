@@ -5,166 +5,46 @@ class PartialAnalysis {
         this.canvas = null;
         this.canvasSetup = null;
         this.partialData = [];
+        this.retryCount = 0;
+        this.retryTimer = null;
     }
 
-    // 部分一致ワードクラウドを描画
+    // キャンバスを保持し、メッセージだけを切り替える。
     draw() {
-        document.querySelectorAll('.viewPanel').forEach(p => p.style.display = 'none');
         const panel = document.getElementById('partialView');
-        panel.style.display = 'block';
-        
-        if (this.wordList.length === 0) {
-            panel.innerHTML = '<p style="text-align: center; margin-top: 50px;">データがありません。ファイルを選択して分析を実行してください。</p>';
-            return;
-        }
-        
-        // 部分一致分析を実行
+        PassCloudUtils.showNoData(panel, this.wordList.length === 0);
+        if (this.wordList.length === 0) return;
+
         this.partialData = this._analyzePartialMatches();
-        
-        if (this.partialData.length === 0) {
-            panel.innerHTML = this._getNoDataHTML();
-            return;
-        }
-        
-        // HTMLを生成
-        const html = this._generateHTML();
-        panel.innerHTML = html;
-        
-        // ワードクラウドを描画
-        setTimeout(() => {
-            this._drawPartialWordCloud();
-        }, 100);
+        const noMatches = this.partialData.length === 0;
+        panel.querySelector('.no-matches').hidden = !noMatches;
+        panel.querySelector('#partialCloudCanvas-container').hidden = noMatches;
+        const total = this.partialData.reduce((sum, [, count]) => sum + count, 0);
+        panel.querySelector('.partial-info').textContent =
+            `固定の語幹リスト61語｜抽出された語句数：${this.partialData.length}｜総出現回数：${total.toLocaleString()}`;
+        if (!noMatches) this._drawPartialWordCloud();
     }
 
-    // 部分一致分析を実行
+    // 計算は純粋なロジックへ委譲する。
     _analyzePartialMatches() {
-        const extractedPhrases = {};
-        const stemUsage = {};
-        
-        // 各パスワードを処理
-        this.wordList.forEach(([password, count]) => {
-            const lowerPassword = password.toLowerCase();
-            const processedStems = new Set();
-            
-            // 各語幹でチェック
-            knownStems.forEach(stem => {
-                if (lowerPassword.includes(stem)) {
-                    stemUsage[stem] = (stemUsage[stem] || 0) + count;
-                    
-                    // すべての出現位置を検索
-                    let searchIndex = 0;
-                    while (searchIndex < lowerPassword.length) {
-                        const index = lowerPassword.indexOf(stem, searchIndex);
-                        if (index === -1) break;
-                        
-                        const key = `${stem}-${index}`;
-                        if (processedStems.has(key)) {
-                            searchIndex = index + 1;
-                            continue;
-                        }
-                        processedStems.add(key);
-                        
-                        // 前の部分（接頭語）
-                        if (index > 0) {
-                            const prefix = lowerPassword.substring(0, index);
-                            if (prefix.length > 0 && prefix.length <= 8 && PassCloudUtils.isValidPhrase(prefix)) {
-                                extractedPhrases[prefix] = (extractedPhrases[prefix] || 0) + count;
-                            }
-                        }
-                        
-                        // 後の部分（接尾語）
-                        const endIndex = index + stem.length;
-                        if (endIndex < lowerPassword.length) {
-                            const suffix = lowerPassword.substring(endIndex);
-                            if (suffix.length > 0 && suffix.length <= 8 && PassCloudUtils.isValidPhrase(suffix)) {
-                                extractedPhrases[suffix] = (extractedPhrases[suffix] || 0) + count;
-                            }
-                        }
-                        
-                        searchIndex = index + stem.length;
-                    }
-                }
-            });
-        });
-        
-        // 使用された語幹をログ出力
-        const usedStemsList = Object.entries(stemUsage)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10);
-        console.log('Most used stems:', usedStemsList);
-        
-        // 配列に変換してソート
-        const sortedPhrases = Object.entries(extractedPhrases)
-            .filter(([phrase, count]) => {
-                return phrase.length > 0 && 
-                       count > 1 && 
-                       !knownStems.includes(phrase) && 
-                       !PassCloudUtils.isSingleChar(phrase);
-            })
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 200);
-        
-        console.log('Partial match analysis:', {
-            totalExtracted: Object.keys(extractedPhrases).length,
-            filteredCount: sortedPhrases.length,
-            top10: sortedPhrases.slice(0, 10)
-        });
-        
-        return sortedPhrases;
-    }
-
-    // データなしのHTML
-    _getNoDataHTML() {
-        return `
-            <div class="partial-container">
-                <h2>🧩 部分一致ワードクラウド</h2>
-                <p style="text-align: center; margin-top: 50px; color: var(--text-secondary);">
-                    分析対象となる部分一致語句が見つかりませんでした。<br>
-                    パスワードリストに共通語幹（pass, admin, 123など）が含まれていない可能性があります。
-                </p>
-            </div>
-        `;
-    }
-
-    // HTMLを生成
-    _generateHTML() {
-        const totalOccurrences = this.partialData.reduce((sum, [_, count]) => sum + count, 0);
-        
-        return `
-            <div class="partial-container">
-                <h2>🧩 部分一致ワードクラウド</h2>
-                <p class="partial-description">
-                    共通語幹（pass, admin, 123など）と組み合わせて使われる語句を可視化します。<br>
-                    推測しやすいパスワードパターンの把握に役立ちます。
-                </p>
-                <div class="partial-info">
-                    <span>✅ 自動語幹検出：上位50語を使用</span>
-                    <span>｜</span>
-                    <span>抽出された語句数：${this.partialData.length}</span>
-                    <span>｜</span>
-                    <span>総出現回数：${totalOccurrences.toLocaleString()}</span>
-                </div>
-                <div id="partialCloudCanvas-container" style="width: 100%; height: 600px; position: relative;">
-                    <canvas id="partialCloudCanvas" style="width: 100%; height: 100%;"></canvas>
-                </div>
-            </div>
-        `;
+        return PassCloudPartial.analyzePartialMatches(this.wordList);
     }
 
     // 部分一致ワードクラウドを描画
     _drawPartialWordCloud() {
         this.canvas = document.getElementById('partialCloudCanvas');
-        if (!this.canvas) {
-            console.error('Partial cloud canvas not found!');
-            return;
-        }
         
         this.canvasSetup = PassCloudUtils.setupCanvas(this.canvas);
         if (!this.canvasSetup) {
-            setTimeout(() => this._drawPartialWordCloud(), 100);
+            if (this.retryCount++ < 10) {
+                this.retryTimer = setTimeout(() => this._drawPartialWordCloud(), 100);
+            } else {
+                PassCloudUtils.notify('部分一致ワードクラウドの描画領域を用意できませんでした。');
+            }
             return;
         }
 
+        this.retryCount = 0;
         const { ctx, rect } = this.canvasSetup;
         
         try {
@@ -176,11 +56,9 @@ class PartialAnalysis {
             
             // WordCloudを描画
             WordCloud(this.canvas, options);
-            
-            console.log('Partial WordCloud drawn successfully with', this.partialData.length, 'phrases');
         } catch (error) {
-            console.error('Partial WordCloud error:', error);
-            this._drawError(ctx, rect, error.message);
+            PassCloudUtils.notify('部分一致ワードクラウドを描画できませんでした。');
+            this._drawError(ctx, rect, '描画できませんでした');
         }
     }
 
@@ -199,8 +77,10 @@ class PartialAnalysis {
             ]
         };
         
+        const maxWeight = Math.max(...this.partialData.map(([, count]) => count));
+        const counts = new Map(this.partialData);
         return {
-            list: this.partialData,
+            list: this.partialData.map(([word, count]) => [word, count]),
             gridSize: 6,
             weightFactor: function(size) {
                 return Math.pow(size, 0.8) * 8;
@@ -209,7 +89,7 @@ class PartialAnalysis {
             fontWeight: 'bold',
             color: function(word, weight, fontSize) {
                 const colors = isDarkMode ? colorSchemes.dark : colorSchemes.light;
-                const index = Math.floor((1 - fontSize / 60) * colors.length);
+                const index = PassCloudText.colorIndex(weight, maxWeight, colors.length);
                 return colors[Math.min(Math.max(index, 0), colors.length - 1)];
             },
             rotateRatio: 0.35,
@@ -224,15 +104,10 @@ class PartialAnalysis {
             hover: (item, dimension, event) => {
                 if (item) {
                     this.canvas.style.cursor = 'pointer';
-                    this.canvas.title = `"${item[0]}": ${item[1]}回出現`;
+                    this.canvas.title = `"${item[0]}": ${counts.get(item[0])}回出現`;
                 } else {
                     this.canvas.style.cursor = 'default';
                     this.canvas.title = '';
-                }
-            },
-            click: (item, dimension, event) => {
-                if (item) {
-                    console.log('Partial phrase clicked:', item[0], 'Count:', item[1]);
                 }
             }
         };
@@ -287,6 +162,8 @@ class PartialAnalysis {
 
     // クリーンアップ
     cleanup() {
+        clearTimeout(this.retryTimer);
+        this.retryCount = 0;
         if (this.canvas) {
             this.canvas.style.cursor = 'default';
             this.canvas.title = '';

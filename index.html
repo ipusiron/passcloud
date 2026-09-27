@@ -2,11 +2,16 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
     <title>PassCloud</title>
     <link rel="stylesheet" href="css/main.css">
     <script src="js/wordcloud2.js"></script>
 </head>
 <body>
+    <noscript>このツールを使うには、ブラウザーーのJavaScriptを有効にしてください。</noscript>
     <header>
         <div class="header-content">
             <div>
@@ -25,41 +30,63 @@
     </header>
 
     <section id="controls">
-        <div id="tabs" class="tab-buttons">
-            <button data-tab="cloud" class="active" onclick="switchView('cloud')">ワードクラウド</button>
-            <button data-tab="partial" onclick="switchView('partial')">部分一致ワードクラウド</button>
-            <button data-tab="stats" onclick="switchView('stats')">統計情報</button>
-            <button data-tab="heatmap" onclick="switchView('heatmap')">長さ×頻度ヒートマップ</button>
+        <div id="tabs" class="tab-buttons" role="tablist" aria-label="分析結果の表示">
+            <button id="tab-cloud" data-tab="cloud" class="active" role="tab" aria-selected="true" aria-controls="cloudView" tabindex="0">ワードクラウド</button>
+            <button id="tab-partial" data-tab="partial" role="tab" aria-selected="false" aria-controls="partialView" tabindex="-1">部分一致ワードクラウド</button>
+            <button id="tab-stats" data-tab="stats" role="tab" aria-selected="false" aria-controls="statsView" tabindex="-1">統計情報</button>
+            <button id="tab-heatmap" data-tab="heatmap" role="tab" aria-selected="false" aria-controls="heatmapView" tabindex="-1">長さ×頻度ヒートマップ</button>
         </div>
         <div id="stemOption">
             <label><input type="checkbox" id="stemMode"> 語幹推定モード</label>
         </div>
-        <button id="analyzeButton" onclick="analyze()">📊 分析実行</button>
+        <button id="analyzeButton">📊 分析実行</button>
     </section>
 
-    <div id="dropZone" class="drop-zone">
+    <div id="dropZone" class="drop-zone" role="button" tabindex="0" aria-label="テキストファイルを選択">
         ここにパスワードリスト（.txt）をドラッグ＆ドロップ<br>
         またはクリックして選択
     </div>
-    <input type="file" id="fileInput" accept=".txt" style="display: none;">
+    <input type="file" id="fileInput" accept=".txt" hidden>
     <div id="fileInfo" class="file-info"></div>
 
-    <div id="loadingIndicator" class="loading" style="display:none;">🔄 処理中です…</div>
+    <div id="loadingIndicator" class="loading" hidden>🔄 処理中です…</div>
+
+    <div id="statusMessage" role="status" aria-live="polite"></div>
 
     <main>
-        <div id="cloudView" class="viewPanel" style="display:block;"><canvas id="cloudCanvas"></canvas></div>
-        <div id="partialView" class="viewPanel" style="display:none;"></div>
-        <div id="statsView" class="viewPanel" style="display:none;"></div>
-        <div id="heatmapView" class="viewPanel" style="display:none;"></div>
+        <div id="cloudView" class="viewPanel" role="tabpanel" aria-labelledby="tab-cloud">
+            <p class="no-data" hidden>データがありません。ファイルを選択して分析を実行してください。</p>
+            <div class="view-content"><canvas id="cloudCanvas" aria-label="パスワードのワードクラウド"></canvas></div>
+        </div>
+        <div id="partialView" class="viewPanel" role="tabpanel" aria-labelledby="tab-partial" hidden>
+            <p class="no-data" hidden>データがありません。ファイルを選択して分析を実行してください。</p>
+            <div class="view-content"><div class="partial-container">
+                    <h2>🧩 部分一致ワードクラウド</h2>
+                    <p class="partial-description">固定の語幹に前後する語句を可視化します。</p>
+                    <p class="partial-info"></p>
+                    <p class="no-matches" hidden>分析対象となる部分一致語句が見つかりませんでした。</p>
+                    <div id="partialCloudCanvas-container">
+                        <canvas id="partialCloudCanvas" aria-label="部分一致語句のワードクラウド"></canvas>
+                    </div>
+                </div></div>
+        </div>
+        <div id="statsView" class="viewPanel" role="tabpanel" aria-labelledby="tab-stats" hidden>
+            <p class="no-data" hidden>データがありません。ファイルを選択して分析を実行してください。</p>
+            <div class="view-content"></div>
+        </div>
+        <div id="heatmapView" class="viewPanel" role="tabpanel" aria-labelledby="tab-heatmap" hidden>
+            <p class="no-data" hidden>データがありません。ファイルを選択して分析を実行してください。</p>
+            <div class="view-content"></div>
+        </div>
     </main>
 
     <!-- ヘルプモーダル -->
-    <div id="helpModal" class="modal" style="display: none;">
+    <div id="helpModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
         <div class="modal-overlay"></div>
         <div class="modal-content">
             <div class="modal-header">
-                <h2>📖 PassCloud ヘルプ</h2>
-                <button class="modal-close" id="helpModalClose">&times;</button>
+                <h2 id="helpTitle">📖 PassCloud ヘルプ</h2>
+                <button class="modal-close" id="helpModalClose" aria-label="ヘルプを閉じる">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="help-content">
@@ -67,7 +94,7 @@
                         <h3>🌥 ワードクラウド</h3>
                         <p>パスワードリスト内で出現頻度の高い単語を、フォントサイズと色の濃淡で可視化します。よく使われているパターンが一目で把握できます。</p>
                         <ul>
-                            <li><strong>語幹推定モード</strong>: ONにすると、末尾の数字や記号を除去して正規化します（例：password123 → password）</li>
+                            <li><strong>語幹推定モード</strong>: ONにすると、末尾の数字や記号を除去して正規化します（例：password123 → password）。空になる場合は元の語を保持</li>
                             <li><strong>色分け</strong>: 出現頻度が高いほど大きく、濃い色で表示されます</li>
                             <li><strong>インタラクション</strong>: 単語にマウスカーソルを合わせると出現回数が表示されます</li>
                         </ul>
@@ -77,7 +104,7 @@
                         <h3>🧩 部分一致ワードクラウド</h3>
                         <p>よく使われる語幹（pass, admin, loveなど）に部分一致するパスワードを対象に、セットで使われている語句を抽出してワードクラウド表示します。</p>
                         <ul>
-                            <li><strong>語幹リスト</strong>: 50個の一般的なパスワード語幹を使用</li>
+                            <li><strong>語幹リスト</strong>: 固定の語幹リスト61語を使用</li>
                             <li><strong>抽出対象</strong>: 語幹の前後に付く語句（接頭語・接尾語）</li>
                             <li><strong>用途</strong>: 推測しやすいパスワードパターンの把握</li>
                         </ul>
@@ -99,7 +126,7 @@
                         <h3>🔥 長さ×頻度ヒートマップ</h3>
                         <p>パスワードの「長さ」と「出現頻度」の関係を2次元マトリクスで可視化します。</p>
                         <ul>
-                            <li><strong>縦軸</strong>: パスワードの文字数（4〜20文字）</li>
+                            <li><strong>縦軸</strong>: 20文字以下の語から決定。21文字以上は除外件数を表示</li>
                             <li><strong>横軸</strong>: 出現頻度の区間（1回、2-3回、4-5回...）</li>
                             <li><strong>色の濃さ</strong>: その長さ・頻度に該当するユニークパスワード数</li>
                             <li><strong>ツールチップ</strong>: セルにカーソルを合わせると詳細情報を表示</li>
@@ -120,8 +147,8 @@
                         <h3>📄 入力ファイル仕様</h3>
                         <ul>
                             <li><strong>形式</strong>: UTF-8エンコードの.txtファイル</li>
-                            <li><strong>構造</strong>: 1行に1パスワード</li>
-                            <li><strong>推奨サイズ</strong>: 最大10,000行程度（ブラウザ性能による）</li>
+                            <li><strong>構造</strong>: 1行に1パスワード。前後の空白と空行を除き、大文字小文字を区別せずに集計</li>
+                            <li><strong>推奨サイズ</strong>: 10MB以下、最大10,000行程度を推奨（ブラウザー性能による）</li>
                             <li><strong>サンプル</strong>: sample/passcloud_sample_1000.txtで動作確認可能</li>
                         </ul>
                     </section>
@@ -130,16 +157,16 @@
                         <h3>🔒 プライバシーとセキュリティ</h3>
                         <ul>
                             <li><strong>完全クライアント側処理</strong>: アップロードされたファイルは外部サーバーに送信されません</li>
-                            <li><strong>メモリ上での処理</strong>: データはブラウザのメモリ内でのみ処理され、永続化されません</li>
-                            <li><strong>ローカル実行</strong>: インターネット接続なしでも動作します（WordCloudライブラリ除く）</li>
+                            <li><strong>メモリ上での処理</strong>: データはブラウザーのメモリ内でのみ処理され、永続化されません</li>
+                            <li><strong>ローカル実行</strong>: 外部への通信は行いません。同梱ファイルだけで動作します</li>
                         </ul>
                     </section>
 
                     <section class="help-section">
                         <h3>⚠️ 注意事項</h3>
                         <ul>
-                            <li>大量のデータを処理する際は、ブラウザの性能により処理時間が長くなる場合があります</li>
-                            <li>メモリ不足によりブラウザがクラッシュする可能性があります</li>
+                            <li>大量のデータを処理する際は、ブラウザーの性能により処理時間が長くなる場合があります</li>
+                            <li>メモリ不足によりブラウザーがクラッシュする可能性があります</li>
                             <li>このツールは教育・研究目的で作成されています</li>
                             <li>パスワード分析は適切な権限の下で行ってください</li>
                         </ul>
@@ -149,6 +176,12 @@
         </div>
     </div>
 
+    <!-- DOM非依存の集計ロジック（file://対応の通常スクリプト） -->
+    <script src="js/core/text-processor.js"></script>
+    <script src="js/core/stems.js"></script>
+    <script src="js/core/stats-data.js"></script>
+    <script src="js/core/heatmap-data.js"></script>
+    <script src="js/core/partial-data.js"></script>
     <!-- 共通ユーティリティ -->
     <script src="js/utils.js"></script>
     <!-- 分析モジュール -->

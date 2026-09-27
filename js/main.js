@@ -23,7 +23,12 @@ class PassCloudApp {
 
     // テーマ関連の初期化
     initTheme() {
-        const savedTheme = localStorage.getItem('theme') || 'light';
+        let savedTheme = 'light';
+        try {
+            savedTheme = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
+        } catch {
+            // 保存先が使えなくても、テーマは画面内で切り替えられる。
+        }
         document.documentElement.setAttribute('data-theme', savedTheme);
         this.updateThemeIcon(savedTheme);
     }
@@ -33,7 +38,11 @@ class PassCloudApp {
         const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
         
         document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('theme', newTheme);
+        try {
+            localStorage.setItem('theme', newTheme);
+        } catch {
+            // テーマの永続化だけを省略する。
+        }
         this.updateThemeIcon(newTheme);
         
         // 現在のビューを再描画
@@ -49,6 +58,21 @@ class PassCloudApp {
 
     // イベントリスナーの設定
     setupEventListeners() {
+        document.getElementById('analyzeButton').addEventListener('click', () => this.analyze());
+        const tabs = [...document.querySelectorAll('#tabs button')];
+        tabs.forEach((tab, index) => {
+            tab.addEventListener('click', () => this.switchView(tab.dataset.tab));
+            tab.addEventListener('keydown', event => {
+                const movements = { ArrowRight: (index + 1) % tabs.length, ArrowLeft: (index + tabs.length - 1) % tabs.length,
+                    Home: 0, End: tabs.length - 1 };
+                if (!(event.key in movements)) return;
+                event.preventDefault();
+                const next = tabs[movements[event.key]];
+                this.switchView(next.dataset.tab);
+                next.focus();
+            });
+        });
+
         // テーマトグルボタン
         const themeToggle = document.getElementById('themeToggle');
         if (themeToggle) {
@@ -89,9 +113,16 @@ class PassCloudApp {
                 fileInput.click();
             });
 
+            dropZone.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    fileInput.click();
+                }
+            });
+
             fileInput.addEventListener("change", (e) => {
-                this.currentFile = e.target.files[0];
-                this.updateFileInfo(this.currentFile.name);
+                if (!e.target.files || e.target.files.length === 0) return;
+                this.selectFile(e.target.files[0]);
             });
 
             dropZone.addEventListener("dragover", (e) => {
@@ -106,83 +137,108 @@ class PassCloudApp {
             dropZone.addEventListener("drop", (e) => {
                 e.preventDefault();
                 dropZone.classList.remove("dragover");
-                this.currentFile = e.dataTransfer.files[0];
-                this.updateFileInfo(this.currentFile.name);
+                if (!e.dataTransfer || !e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
+                this.selectFile(e.dataTransfer.files[0]);
             });
         }
+    }
+
+    // 拡張子、MIME、サイズを読み込み前に検証する。
+    selectFile(file) {
+        if (!/\.txt$/i.test(file.name) || !file.type.startsWith('text/')) {
+            this.currentFile = null;
+            this.updateFileInfo('');
+            PassCloudUtils.notify('UTF-8のテキストファイル（.txt）を選択してください。');
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            this.currentFile = null;
+            this.updateFileInfo('');
+            PassCloudUtils.notify('ファイルが大きすぎます（上限10MB）');
+            return;
+        }
+        this.currentFile = file;
+        this.updateFileInfo(file.name);
+        PassCloudUtils.notify('ファイルを選択しました。「📊 分析実行」を押してください。');
     }
 
     // ファイル情報更新
     updateFileInfo(name) {
         const fileInfo = document.getElementById("fileInfo");
         if (fileInfo) {
-            fileInfo.textContent = `📄 読み込み対象: ${name}`;
+            fileInfo.textContent = name ? `📄 読み込み対象: ${name}` : '';
         }
     }
 
     // WordCloudライブラリの確認
     checkWordCloudLibrary() {
-        setTimeout(() => {
-            if (typeof WordCloud === 'undefined') {
-                console.error('WordCloud library not loaded!');
-                console.log('Checking alternative names...');
-                if (typeof wordcloud !== 'undefined') {
-                    window.WordCloud = wordcloud;
-                    console.log('Found wordcloud, aliasing to WordCloud');
-                } else {
-                    alert('WordCloudライブラリが読み込まれていません。ページを再読み込みしてください。');
-                }
-            } else {
-                console.log('WordCloud library loaded successfully');
-            }
-        }, 1000);
+        if (typeof WordCloud !== 'function') {
+            PassCloudUtils.notify('WordCloudライブラリーが読み込まれていません。ページを再読み込みしてください。');
+        }
     }
 
     // 分析実行
     analyze() {
         if (!this.currentFile) {
-            alert("ファイルが選択されていません。");
+            PassCloudUtils.notify("ファイルが選択されていません。");
             return;
         }
 
         PassCloudUtils.showLoading("ファイル読み込み中…");
 
+        const button = document.getElementById('analyzeButton');
+        if (button.disabled) return;
+        button.disabled = true;
+        const finish = () => {
+            PassCloudUtils.hideLoading();
+            button.disabled = false;
+        };
         const reader = new FileReader();
         reader.onload = (e) => {
             const text = e.target.result;
             PassCloudUtils.showLoading("分析中…");
-            this.processText(text);
+            try {
+                this.processText(text);
+            } catch {
+                finish();
+                PassCloudUtils.notify('ファイルを処理できませんでした。UTF-8のテキストを確認してください。');
+                return;
+            }
 
             const activeMode = document.querySelector("#tabs button.active").dataset.tab;
             
             // DOM更新を待ってから描画
             setTimeout(() => {
-                this.drawCurrentMode(activeMode);
-                PassCloudUtils.hideLoading();
+                try {
+                    this.drawCurrentMode(activeMode);
+                    if (this.wordList.length === 0) PassCloudUtils.notify('空行以外のデータがありません。');
+                    else PassCloudUtils.notify('分析が完了しました。');
+                } finally {
+                    finish();
+                }
             }, 100);
         };
-        reader.readAsText(this.currentFile);
+        reader.onerror = () => {
+            finish();
+            PassCloudUtils.notify('ファイルを読み込めませんでした。選び直してください。');
+        };
+        reader.onabort = reader.onerror;
+        try {
+            reader.readAsText(this.currentFile, 'UTF-8');
+        } catch {
+            reader.onerror();
+        }
     }
 
     // テキスト処理
     processText(text) {
-        const result = PassCloudUtils.processText(text);
+        const result = PassCloudText.processText(text);
         this.wordList = result.wordList;
         this.originalLineCount = result.originalLineCount;
         
         // 分析モジュールのデータを更新
         this.updateAnalysisModules();
         
-        // パスワードの長さ分布を確認
-        const lengthDistribution = {};
-        this.wordList.forEach(([word, count]) => {
-            const len = word.length;
-            if (!lengthDistribution[len]) {
-                lengthDistribution[len] = 0;
-            }
-            lengthDistribution[len] += count;
-        });
-        console.log('Length distribution:', lengthDistribution);
     }
 
     // 分析モジュールのデータ更新
@@ -215,6 +271,9 @@ class PassCloudApp {
 
     // 現在のモードを描画
     drawCurrentMode(mode) {
+        const panel = document.getElementById(mode + 'View');
+        PassCloudUtils.showNoData(panel, this.wordList.length === 0);
+        if (this.wordList.length === 0) return;
         switch (mode) {
             case 'cloud':
                 this.wordCloudAnalysis?.draw();
@@ -234,28 +293,33 @@ class PassCloudApp {
     // ビュー切り替え
     switchView(mode) {
         // 既存のツールチップを削除
-        const existingTooltip = document.querySelector('.heatmap-tooltip');
-        if (existingTooltip) {
-            existingTooltip.remove();
-        }
+        document.querySelectorAll('.heatmap-tooltip').forEach(tooltip => tooltip.remove());
+        this.wordCloudAnalysis?.cleanup();
+        this.partialAnalysis?.cleanup();
         
-        document.querySelectorAll('.viewPanel').forEach(p => p.style.display = 'none');
-        document.querySelectorAll('#tabs button').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.viewPanel').forEach(p => p.hidden = true);
+        document.querySelectorAll('#tabs button').forEach(btn => {
+            btn.classList.remove('active');
+            btn.setAttribute('aria-selected', 'false');
+            btn.tabIndex = -1;
+        });
         
         const targetButton = document.querySelector(`#tabs button[data-tab="${mode}"]`);
         if (targetButton) {
             targetButton.classList.add('active');
+            targetButton.setAttribute('aria-selected', 'true');
+            targetButton.tabIndex = 0;
         }
         
         const targetView = document.getElementById(mode + 'View');
         if (targetView) {
-            targetView.style.display = 'block';
+            targetView.hidden = false;
         }
 
         // 語幹推定オプションの表示制御
         const stemOption = document.getElementById("stemOption");
         if (stemOption) {
-            stemOption.style.display = (mode === "cloud") ? "inline-block" : "none";
+            stemOption.hidden = mode !== "cloud";
         }
 
         // データがある場合のみ描画
@@ -264,7 +328,7 @@ class PassCloudApp {
         } else {
             // データがない場合のメッセージ表示
             if (targetView) {
-                targetView.innerHTML = '<p style="text-align: center; margin-top: 50px;">データがありません。ファイルを選択して分析を実行してください。</p>';
+                PassCloudUtils.showNoData(targetView, true);
             }
         }
     }
@@ -295,9 +359,23 @@ class PassCloudApp {
             modalOverlay.addEventListener('click', () => this.hideHelpModal());
         }
         
+        helpModal.addEventListener('keydown', event => {
+            if (event.key !== 'Tab') return;
+            const focusable = [...helpModal.querySelectorAll('button, a[href], input, select, [tabindex="0"]')];
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        });
+
         // ESCキーで閉じる
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && helpModal && helpModal.style.display !== 'none') {
+            if (e.key === 'Escape' && helpModal && !helpModal.hidden) {
                 this.hideHelpModal();
             }
         });
@@ -307,7 +385,9 @@ class PassCloudApp {
     showHelpModal() {
         const helpModal = document.getElementById('helpModal');
         if (helpModal) {
-            helpModal.style.display = 'flex';
+            this.modalReturnFocus = document.activeElement;
+            helpModal.hidden = false;
+            document.getElementById('helpModalClose').focus();
             helpModal.classList.remove('closing');
             // スクロール位置をリセット
             const modalBody = helpModal.querySelector('.modal-body');
@@ -323,13 +403,9 @@ class PassCloudApp {
     hideHelpModal() {
         const helpModal = document.getElementById('helpModal');
         if (helpModal) {
-            helpModal.classList.add('closing');
-            setTimeout(() => {
-                helpModal.style.display = 'none';
-                helpModal.classList.remove('closing');
-                // ボディのスクロールを復元
-                document.body.style.overflow = '';
-            }, 300);
+            helpModal.hidden = true;
+            document.body.style.overflow = '';
+            this.modalReturnFocus?.focus();
         }
     }
 
@@ -351,15 +427,6 @@ let passCloudApp = null;
 document.addEventListener('DOMContentLoaded', () => {
     passCloudApp = new PassCloudApp();
 });
-
-// グローバル関数（既存のHTMLから呼び出されるため）
-function analyze() {
-    passCloudApp?.analyze();
-}
-
-function switchView(mode) {
-    passCloudApp?.switchView(mode);
-}
 
 // ページ離脱時のクリーンアップ
 window.addEventListener('beforeunload', () => {

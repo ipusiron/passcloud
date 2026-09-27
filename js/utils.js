@@ -1,128 +1,50 @@
-// 共通語幹リストの定義
-const knownStems = [
-    // 一般的なパスワード語幹
-    "pass", "password", "admin", "user", "root", "test", "demo", "guest",
-    // 数字パターン
-    "123", "111", "000", "1234", "12345", "321", "666", "777", "888", "999",
-    // キーボードパターン
-    "qwe", "qwerty", "asd", "asdf", "zxc", "abc",
-    // 認証関連
-    "login", "access", "secret", "master", "super", "manager",
-    // 愛情・感情系
-    "love", "iloveyou", "hate", "kiss", "baby", "angel",
-    // 動物・生物
-    "dragon", "monkey", "tiger", "bear", "cat", "dog",
-    // キャラクター・ヒーロー
-    "superman", "batman", "spider", "hero", "ninja",
-    // スポーツ
-    "football", "baseball", "soccer", "basket",
-    // その他頻出語
-    "welcome", "hello", "letmein", "trustno", "changeme",
-    "default", "system", "security", "private", "public"
-];
-
 // 共通ユーティリティクラス
 class PassCloudUtils {
-    // HTMLエスケープ関数
-    static escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+    // 入力文字列はtextContentで描画する。
+    static element(tag, className = '', text = '') {
+        const element = document.createElement(tag);
+        element.className = className;
+        element.textContent = text;
+        return element;
     }
 
-    // 語幹推定関数
-    static normalize(word) {
-        return word.replace(/[^a-z]/gi, '').replace(/[0-9]+$/, '');
+    static showNoData(panel, noData) {
+        panel.querySelector('.no-data').hidden = !noData;
+        panel.querySelector('.view-content').hidden = noData;
+    }
+
+    static notify(message) {
+        document.getElementById('statusMessage').textContent = message;
     }
 
     // ローディング表示制御
     static showLoading(message = "処理中です…") {
         const el = document.getElementById("loadingIndicator");
         el.textContent = "🔄 " + message;
-        el.style.display = "block";
+        el.hidden = false;
+        this.notify(message);
     }
 
     static hideLoading() {
-        document.getElementById("loadingIndicator").style.display = "none";
-    }
-
-    // テキストファイル処理
-    static processText(text) {
-        console.log('Processing text, length:', text.length);
-        const lines = text.split(/\r?\n/).filter(l => l.trim() !== "");
-        console.log('Found', lines.length, 'lines');
-        
-        const freqMap = {};
-        for (let line of lines) {
-            let word = line.trim().toLowerCase();
-            freqMap[word] = (freqMap[word] || 0) + 1;
-        }
-
-        const wordList = Object.entries(freqMap).map(([word, count]) => [word, count]);
-        console.log('Created wordList with', wordList.length, 'unique words');
-        
-        return {
-            wordList,
-            originalLineCount: lines.length
-        };
-    }
-
-    // パターン検出関数
-    static hasSequentialPattern(password) {
-        const patterns = ['123', '234', '345', '456', '567', '678', '789', '890',
-                         '111', '222', '333', '444', '555', '666', '777', '888', '999', '000',
-                         'abc', 'bcd', 'cde', 'def', 'efg', 'fgh', 'ghi', 'hij', 'ijk',
-                         'jkl', 'klm', 'lmn', 'mno', 'nop', 'opq', 'pqr', 'qrs', 'rst',
-                         'stu', 'tuv', 'uvw', 'vwx', 'wxy', 'xyz'];
-        return patterns.some(pattern => password.toLowerCase().includes(pattern));
-    }
-
-    static hasKeyboardPattern(password) {
-        const patterns = ['qwerty', 'qwertz', 'azerty', 'qwer', 'asdf', 'zxcv',
-                         'qaz', 'wsx', 'edc', 'rfv', 'tgb', 'yhn', 'ujm',
-                         'wasd', 'asd', 'zxc'];
-        return patterns.some(pattern => password.toLowerCase().includes(pattern));
-    }
-
-    static hasYearPattern(password) {
-        return /19\d{2}|20\d{2}/.test(password);
-    }
-
-    // 有効な語句かどうかを判定
-    static isValidPhrase(phrase) {
-        if (phrase.trim().length === 0) return false;
-        if (/^[^a-z0-9]+$/i.test(phrase)) return false;
-        if (this.isSingleChar(phrase)) return false;
-        return true;
-    }
-
-    // 単一文字の繰り返しかどうかを判定
-    static isSingleChar(str) {
-        if (str.length === 0) return false;
-        const firstChar = str[0];
-        return str.split('').every(char => char === firstChar);
+        document.getElementById("loadingIndicator").hidden = true;
     }
 
     // Canvas設定関数
     static setupCanvas(canvas) {
         if (!canvas) {
-            console.error('Canvas element not found!');
             return null;
         }
         
         const ctx = canvas.getContext('2d');
         const rect = canvas.getBoundingClientRect();
         
-        if (rect.width === 0 || rect.height === 0) {
-            console.error('Canvas has zero size!');
+        if (!ctx || rect.width === 0 || rect.height === 0) {
             return null;
         }
         
         const scale = window.devicePixelRatio || 1;
         canvas.width = rect.width * scale;
         canvas.height = rect.height * scale;
-        canvas.style.width = rect.width + 'px';
-        canvas.style.height = rect.height + 'px';
         
         ctx.scale(scale, scale);
         ctx.textBaseline = 'alphabetic';
@@ -210,7 +132,6 @@ class PassCloudUtils {
         const start = performance.now();
         const result = func();
         const end = performance.now();
-        console.log(`${name} took ${end - start} milliseconds`);
         return result;
     }
 }

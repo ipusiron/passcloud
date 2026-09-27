@@ -4,28 +4,32 @@ class WordCloudAnalysis {
         this.wordList = wordList;
         this.canvas = null;
         this.canvasSetup = null;
+        this.retryCount = 0;
+        this.retryTimer = null;
     }
 
     // ワードクラウドを描画
     draw() {
-        console.log('drawWordCloud called, wordList length:', this.wordList.length);
         
         if (this.wordList.length === 0) {
-            console.log('No data to display');
             return;
         }
         
-        document.querySelectorAll('.viewPanel').forEach(p => p.style.display = 'none');
-        document.getElementById('cloudView').style.display = 'block';
+        PassCloudUtils.showNoData(document.getElementById('cloudView'), false);
 
         this.canvas = document.getElementById('cloudCanvas');
         this.canvasSetup = PassCloudUtils.setupCanvas(this.canvas);
         
         if (!this.canvasSetup) {
-            setTimeout(() => this.draw(), 100);
+            if (this.retryCount++ < 10) {
+                this.retryTimer = setTimeout(() => this.draw(), 100);
+            } else {
+                PassCloudUtils.notify('ワードクラウドの描画領域を用意できませんでした。');
+            }
             return;
         }
 
+        this.retryCount = 0;
         const { ctx, rect } = this.canvasSetup;
         
         try {
@@ -35,43 +39,33 @@ class WordCloudAnalysis {
             
             if (stemMode) {
                 displayWordList = this._applyStemming();
-                console.log('Applied stemming, new list length:', displayWordList.length);
             }
-            
-            console.log('Calling WordCloud with', displayWordList.length, 'words');
-            const sortedWordList = [...displayWordList].sort((a, b) => b[1] - a[1]);
+            const sortedWordList = displayWordList.map(([word, count]) => [word, count]).sort((a, b) => b[1] - a[1]);
             
             const isDarkMode = PassCloudUtils.isDarkMode();
             const options = this._getWordCloudOptions(sortedWordList, rect, isDarkMode);
-            
-            console.log('WordCloud options:', options);
             
             // 背景を設定
             this._drawBackground(ctx, rect, isDarkMode);
             
             // WordCloud を描画
             WordCloud(this.canvas, options);
-            
-            console.log('WordCloud called successfully');
         } catch (error) {
-            console.error('WordCloud error:', error);
-            this._drawError(ctx, rect, error.message);
+            PassCloudUtils.notify('ワードクラウドを描画できませんでした。');
+            this._drawError(ctx, rect, '描画できませんでした');
         }
     }
 
     // 語幹推定を適用
     _applyStemming() {
-        const stemmedFreqMap = {};
-        this.wordList.forEach(([word, count]) => {
-            const stemmedWord = PassCloudUtils.normalize(word);
-            stemmedFreqMap[stemmedWord] = (stemmedFreqMap[stemmedWord] || 0) + count;
-        });
-        return Object.entries(stemmedFreqMap).map(([word, count]) => [word, count]);
+        return PassCloudStems.stemWordList(this.wordList);
     }
 
     // WordCloudオプションを取得
     _getWordCloudOptions(sortedWordList, rect, isDarkMode) {
         const colorSchemes = PassCloudUtils.getColorScheme(isDarkMode);
+        const maxWeight = sortedWordList.reduce((max, [, count]) => Math.max(max, count), 0);
+        const counts = new Map(sortedWordList);
         
         return {
             list: sortedWordList,
@@ -81,8 +75,8 @@ class WordCloudAnalysis {
             fontWeight: 'bold',
             color: function(word, weight) {
                 const colors = isDarkMode ? colorSchemes.dark : colorSchemes.light;
-                const index = Math.floor((1 - weight / 100) * colors.length);
-                return colors[Math.min(index, colors.length - 1)];
+                const index = PassCloudText.colorIndex(weight, maxWeight, colors.length);
+                return colors[index];
             },
             rotateRatio: 0.5,
             rotationSteps: 2,
@@ -96,15 +90,10 @@ class WordCloudAnalysis {
             hover: (item, dimension, event) => {
                 if (item) {
                     this.canvas.style.cursor = 'pointer';
-                    this.canvas.title = `${item[0]}: ${item[1]}回`;
+                    this.canvas.title = `${item[0]}: ${counts.get(item[0])}回`;
                 } else {
                     this.canvas.style.cursor = 'default';
                     this.canvas.title = '';
-                }
-            },
-            click: (item, dimension, event) => {
-                if (item) {
-                    console.log('Password:', item[0], 'Count:', item[1]);
                 }
             }
         };
@@ -146,6 +135,8 @@ class WordCloudAnalysis {
 
     // クリーンアップ
     cleanup() {
+        clearTimeout(this.retryTimer);
+        this.retryCount = 0;
         if (this.canvas) {
             this.canvas.style.cursor = 'default';
             this.canvas.title = '';

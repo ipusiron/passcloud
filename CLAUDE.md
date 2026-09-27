@@ -11,6 +11,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **No build process required** - this is a static web application.
 
 ```bash
+# Dependency-free tests (Node 22+)
+npm test
+
 # Serve locally
 python -m http.server 8000
 
@@ -21,24 +24,63 @@ sample/passcloud_sample_1000.txt
 ## Architecture
 
 ### File Structure
+
 ```
-index.html              # Main application entry point
-css/
-  main.css             # CSS entry point (imports all modules)
-  base.css             # CSS variables, typography, layout
-  wordcloud.css        # Word cloud view styles
-  partial.css          # Partial match view styles
-  stats.css            # Statistics view styles
-  heatmap.css          # Heatmap view styles
-  modal.css            # Help modal styles
-js/
-  main.js              # PassCloudApp class (orchestration)
-  utils.js             # PassCloudUtils class + knownStems array
-  wordcloud2.js        # Bundled wordcloud2 library
-  wordcloud-analysis.js # WordCloudAnalysis class
-  partial-analysis.js   # PartialAnalysis class
-  stats-analysis.js     # StatsAnalysis class
-  heatmap-analysis.js   # HeatmapAnalysis class
+passcloud/                             # アプリケーションのルート
+├── .github/                           # GitHub の設定
+│   └── workflows/                     # GitHub Actions のワークフロー
+│       └── test.yml                   # push と pull_request で npm test を実行する
+├── assets/                            # スクリーンショットとフォント
+│   ├── fonts/                         # 自前ホストする Web フォント（外部への接続をなくすため）
+│   │   ├── OFL-Orbitron.txt           # Orbitron の SIL Open Font License 1.1
+│   │   ├── OFL-SpaceMono.txt          # Space Mono の SIL Open Font License 1.1
+│   │   ├── orbitron-700-latin.woff2   # 見出し用 Orbitron Bold（latin サブセット）
+│   │   ├── spacemono-400-latin.woff2  # 本文用 Space Mono Regular（latin サブセット）
+│   │   └── spacemono-700-latin.woff2  # 本文用 Space Mono Bold（latin サブセット）
+│   ├── screenshot.png                 # 旧版の画面（改修前。README からは参照していない）
+│   ├── screenshot2.png                # ライトテーマのワードクラウド（サンプルを分析した直後）
+│   ├── screenshot3.png                # 同じ状態のダークテーマ
+│   └── screenshot4.png                # 統計情報のタブ（基本統計・Top10・長さ別分布）
+├── css/                               # スタイルシート（main.css が他を読み込む）
+│   ├── base.css                       # 配色の CSS 変数・フォント定義・共通レイアウト
+│   ├── heatmap.css                    # 長さ×頻度ヒートマップの見た目
+│   ├── main.css                       # 各 CSS を読み込む入口
+│   ├── modal.css                      # ヘルプモーダルとヘッダーボタンの見た目
+│   ├── partial.css                    # 部分一致ワードクラウドの見た目
+│   ├── stats.css                      # 統計情報の見た目
+│   └── wordcloud.css                  # ワードクラウドの canvas まわりの見た目
+├── js/                                # アプリケーションのスクリプト
+│   ├── core/                          # 画面に依存しない純粋なロジック（Node のテストから読む）
+│   │   ├── heatmap-data.js            # 長さ×頻度のマトリクスと除外件数を計算する
+│   │   ├── partial-data.js            # 語幹に前後する語句を抽出して数える
+│   │   ├── stats-data.js              # 件数・長さ・文字種別・パターンの統計を計算する
+│   │   ├── stems.js                   # 既知の語幹 61 語と語幹推定（末尾の数字・記号の除去）
+│   │   └── text-processor.js          # 入力テキストを [パスワード, 出現回数] に畳む
+│   ├── heatmap-analysis.js            # ヒートマップの描画とツールチップ
+│   ├── main.js                        # 画面の組み立て・ファイル入力・タブ切り替え・テーマ
+│   ├── partial-analysis.js            # 部分一致ワードクラウドの描画
+│   ├── stats-analysis.js              # 統計情報の描画
+│   ├── utils.js                       # 画面まわりの共通処理（canvas 設定・配色・ローディング）
+│   ├── wordcloud-analysis.js          # ワードクラウドの描画
+│   └── wordcloud2.js                  # wordcloud2.js 本体（同梱。手を加えない）
+├── sample/                            # 動作確認用のサンプル
+│   └── passcloud_sample_1000.txt      # 1,005 行・67 種類のパスワードリスト
+├── test/                              # node --test で動く自動テスト（依存なし）
+│   ├── contrast.test.js               # 配色が WCAG 4.5:1 以上かを検証する
+│   ├── format.test.js                 # 1 行に詰め込んだファイルがないかを検証する
+│   ├── heatmap.test.js                # ヒートマップのマトリクスと除外件数を検証する
+│   ├── html.test.js                   # index.html の CSP・meta・id・属性を静的に検証する
+│   ├── partial.test.js                # 部分一致の抽出結果と件数を検証する
+│   ├── readme.test.js                 # README の表と数値をコードで再計算して突き合わせる
+│   ├── stats.test.js                  # 統計の数値と Top10 の並びを検証する
+│   └── text-processor.test.js         # 取り込みと語幹推定の境界値を検証する
+├── .gitignore                         # Git の除外設定
+├── .nojekyll                          # GitHub Pages の Jekyll 処理を無効にする
+├── CLAUDE.md                          # AI 向けの開発ガイド（構成と守ること）
+├── LICENSE                            # 本ツールの MIT ライセンス
+├── README.md                          # 本ドキュメント
+├── index.html                         # 画面のマークアップ
+└── package.json                       # npm test の定義（依存パッケージなし）
 ```
 
 ### Module Architecture
@@ -49,11 +91,11 @@ js/
 - Handles theme switching, file input, view switching
 
 **PassCloudUtils** (`js/utils.js`) - Shared utilities
-- `processText()`: Parses password files into `[word, count]` tuples
+- Pure processing lives in `js/core/`, not in UI utilities.
 - `setupCanvas()`: High-DPI canvas configuration
 - `isDarkMode()`, `getColorScheme()`, `getBarColor()`: Theme-aware rendering
-- Pattern detection: `hasSequentialPattern()`, `hasKeyboardPattern()`, `hasYearPattern()`
-- `knownStems` array: 50+ common password stems for analysis
+- Pattern detection is internal to `PassCloudStats` in `js/core/stats-data.js`.
+- `PassCloudStems.knownStems`: exactly 61 fixed, unique stems.
 
 **Analysis Modules** - Each follows the same interface:
 - `constructor(wordList)` / `updateData(wordList)`
@@ -78,13 +120,13 @@ const { ctx, rect, scale } = PassCloudUtils.setupCanvas(canvas);
 ### Adding a New Analysis View
 1. Create `js/[name]-analysis.js` with class following existing pattern
 2. Add view panel in `index.html`: `<div id="[name]View" class="viewPanel">`
-3. Add tab button: `<button data-tab="[name]" onclick="switchView('[name]')">`
+3. Add an ARIA tab button with data-tab="[name]"; setupEventListeners() binds its click and keyboard events.
 4. Add CSS file and import in `css/main.css`
 5. Initialize in `PassCloudApp.updateAnalysisModules()`
 6. Add case in `PassCloudApp.drawCurrentMode()`
 
 ### Modifying Stem Analysis
-- Edit `knownStems` array in `js/utils.js`
+- The fixed `knownStems` array lives in `js/core/stems.js`.
 - Stems are used by both word cloud stemming mode and partial match analysis
 
 ### Color Schemes
@@ -94,6 +136,19 @@ const { ctx, rect, scale } = PassCloudUtils.setupCanvas(canvas);
 
 ## Constraints
 - Client-side only: No server communication
-- UTF-8 `.txt` files, one password per line
+- UTF-8 `.txt` files, one password per line; maximum 10MB.
+- Input is trimmed and lowercased; blank lines are excluded.
 - Performance limit: ~10,000 lines recommended
 - Japanese UI labels throughout
+
+- Keep classic scripts: file:// must work. Do not add ES module declarations.
+- Core files must not reference DOM APIs, browser state, storage, or logging.
+- Counts stay integer: deep-copy [word, count] tuples before passing to WordCloud.
+- Keep wordcloud2.js, supplied assets/fonts files, old screenshot, and sample bytes unchanged.
+- Do not construct password text with innerHTML. Use textContent.
+- Do not use inline style/event attributes. Dynamic numeric styles use CSSOM.
+- External requests must stay at zero under HTTP and file://.
+- Stemming removes only trailing non-letters, and retains the original if it would become empty.
+- Top10 sorts by count descending and lexical value ascending for ties.
+- Heatmap displays words of at most 20 characters and reports 21+ excluded unique/occurrence counts.
+- README tables and all paths in its annotated directory tree are checked by npm test.

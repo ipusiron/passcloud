@@ -189,14 +189,15 @@
 }
 
 .rank {
+    white-space: nowrap;
     font-weight: bold;
-    color: #667eea;
+    color: var(--accent);
     font-size: 1.1em;
     text-align: center;
 }
 
 [data-theme="dark"] .rank {
-    color: #00ffff;
+    color: var(--accent);
 }
 
 .password {
@@ -316,4 +317,35 @@
     color: var(--text-primary);
     min-width: 60px;
     text-align: right;
+}
+@media (max-width: 768px) {
+    .stats-container {
+        padding: 8px;
+        min-width: 0;
+    }
+
+    .stats-container h2 {
+        font-size: 1.5rem;
+        margin-bottom: 24px;
+    }
+
+    .stats-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 16px;
+    }
+
+    .stat-card, .stats-section {
+        padding: 16px;
+        min-width: 0;
+    }
+
+    .dist-row {
+        grid-template-columns: 55px minmax(0, 1fr) 110px;
+        gap: 8px;
+        padding: 5px 0;
+    }
+
+    .pattern-item {
+        padding: 10px 0;
+    }
 }

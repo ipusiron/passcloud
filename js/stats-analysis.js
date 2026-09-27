@@ -8,12 +8,10 @@ class StatsAnalysis {
 
     // 統計情報を描画
     draw() {
-        document.querySelectorAll('.viewPanel').forEach(p => p.style.display = 'none');
         const panel = document.getElementById('statsView');
-        panel.style.display = 'block';
+        PassCloudUtils.showNoData(panel, this.wordList.length === 0);
         
         if (this.wordList.length === 0) {
-            panel.innerHTML = '<p style="text-align: center; margin-top: 50px;">データがありません。ファイルを選択して分析を実行してください。</p>';
             return;
         }
         
@@ -22,96 +20,21 @@ class StatsAnalysis {
         
         // HTMLを生成
         const html = this._generateHTML();
-        panel.innerHTML = html;
+        const content = panel.querySelector('.view-content');
+        content.innerHTML = html;
+        content.querySelectorAll('.password').forEach((cell, index) => {
+            cell.textContent = this.stats.top10[index].password;
+        });
+        content.querySelectorAll('.dist-bar').forEach((bar, index) => {
+            const percentage = this.stats.lengthDistribution[index].percentage;
+            bar.style.width = percentage + '%';
+            bar.style.backgroundColor = PassCloudUtils.getBarColor(percentage, PassCloudUtils.isDarkMode());
+        });
     }
 
-    // 統計情報を計算
+    // DOM非依存の集計を呼び出す。
     _calculateStatistics() {
-        const totalPasswords = this.originalLineCount;
-        const uniquePasswords = this.wordList.length;
-        
-        // 長さ統計
-        let totalLength = 0;
-        let minLength = Infinity;
-        let maxLength = 0;
-        const lengthMap = {};
-        
-        // 文字種別統計
-        let numericOnly = 0;
-        let alphaOnly = 0;
-        let alphaNumeric = 0;
-        let withSpecial = 0;
-        
-        // パターン統計
-        let sequential = 0;
-        let keyboard = 0;
-        let years = 0;
-        
-        this.wordList.forEach(([password, count]) => {
-            const len = password.length;
-            const intCount = Math.floor(count);
-            totalLength += len * intCount;
-            minLength = Math.min(minLength, len);
-            maxLength = Math.max(maxLength, len);
-            
-            // 長さ別カウント
-            if (!lengthMap[len]) lengthMap[len] = 0;
-            lengthMap[len] += intCount;
-            
-            // 文字種別判定
-            const hasNumeric = /\d/.test(password);
-            const hasAlpha = /[a-zA-Z]/.test(password);
-            const hasSpecial = /[^a-zA-Z0-9]/.test(password);
-            
-            if (hasNumeric && !hasAlpha && !hasSpecial) numericOnly += intCount;
-            else if (hasAlpha && !hasNumeric && !hasSpecial) alphaOnly += intCount;
-            else if (hasAlpha && hasNumeric && !hasSpecial) alphaNumeric += intCount;
-            else if (hasSpecial) withSpecial += intCount;
-            
-            // パターン判定
-            if (PassCloudUtils.hasSequentialPattern(password)) sequential += intCount;
-            if (PassCloudUtils.hasKeyboardPattern(password)) keyboard += intCount;
-            if (PassCloudUtils.hasYearPattern(password)) years += intCount;
-        });
-        
-        // Top 10
-        const top10 = this.wordList
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10)
-            .map(([password, count]) => ({
-                password,
-                count: Math.floor(count),
-                percentage: ((Math.floor(count) / totalPasswords) * 100).toFixed(2)
-            }));
-        
-        // 長さ分布
-        const lengthDistribution = Object.entries(lengthMap)
-            .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-            .map(([length, count]) => ({
-                length: parseInt(length),
-                count,
-                percentage: ((count / totalPasswords) * 100).toFixed(1)
-            }));
-        
-        return {
-            totalPasswords,
-            uniquePasswords,
-            duplicateRate: (((totalPasswords - uniquePasswords) / totalPasswords) * 100).toFixed(1),
-            avgLength: (totalLength / totalPasswords).toFixed(1),
-            minLength,
-            maxLength,
-            numericOnly: ((numericOnly / totalPasswords) * 100).toFixed(1),
-            alphaOnly: ((alphaOnly / totalPasswords) * 100).toFixed(1),
-            alphaNumeric: ((alphaNumeric / totalPasswords) * 100).toFixed(1),
-            withSpecial: ((withSpecial / totalPasswords) * 100).toFixed(1),
-            top10,
-            lengthDistribution,
-            patterns: {
-                sequential: ((sequential / totalPasswords) * 100).toFixed(1),
-                keyboard: ((keyboard / totalPasswords) * 100).toFixed(1),
-                years: ((years / totalPasswords) * 100).toFixed(1)
-            }
-        };
+        return PassCloudStats.calculateStatistics(this.wordList, this.originalLineCount);
     }
 
     // HTMLを生成
@@ -210,20 +133,20 @@ class StatsAnalysis {
             <div class="stats-section">
                 <h3>🏆 Top 10 パスワード</h3>
                 <div class="top-passwords">
-                    <table>
+                    <table aria-label="パスワード出現頻度上位10件">
                         <thead>
                             <tr>
-                                <th>順位</th>
-                                <th>パスワード</th>
-                                <th>出現回数</th>
-                                <th>割合</th>
+                                <th scope="col">順位</th>
+                                <th scope="col">パスワード</th>
+                                <th scope="col">出現回数</th>
+                                <th scope="col">割合</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${this.stats.top10.map((item, index) => `
                                 <tr>
                                     <td class="rank">${index + 1}</td>
-                                    <td class="password">${PassCloudUtils.escapeHtml(item.password)}</td>
+                                    <td class="password"></td>
                                     <td class="count">${item.count.toLocaleString()}</td>
                                     <td class="percentage">${item.percentage}%</td>
                                 </tr>
@@ -245,7 +168,7 @@ class StatsAnalysis {
                         <div class="dist-row">
                             <span class="dist-label">${item.length}文字:</span>
                             <div class="dist-bar-container">
-                                <div class="dist-bar" style="width: ${item.percentage}%; background: ${PassCloudUtils.getBarColor(item.percentage, isDarkMode)}"></div>
+                                <div class="dist-bar"></div>
                             </div>
                             <span class="dist-value">${item.count} (${item.percentage}%)</span>
                         </div>
