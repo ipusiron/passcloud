@@ -49,14 +49,23 @@ test('all words outside display range and empty input are safe', () => {
 });
 
 test('A-7 exclusion clause: 21-character words are outside the display range', () => {
+    // 表示範囲は20文字まで。21文字以上は除外して件数だけサマリーに出す。
+    // 監査A-7の原文は「21文字以上のパスワードが警告なくヒートマップから除外される」で、
+    // 求めているのは除外の明示であって、表示範囲を広げることではない。
+    // 実装（heatmap-data.js の len >= 21 と Math.min(20, maxLength)）も参照実装も同じ振る舞いである。
+    // 実装プロンプト day019_passcloud_codex.md の「21文字以下の語だけで範囲を決める」は
+    // 「20文字以下」の書き間違いだった。同じ行に「21文字以上は除外」と並んでおり両立しない。
+    // 2026-09-28に確定し、この誤記から生まれていた包含節のテストを削除した。境界はここで固定する。
     const data = calculateHeatmapData([['a'.repeat(20), 1], ['b'.repeat(21), 2]], 3);
     assert.deepEqual(data.lengths, [20]);
     assert.equal(data.excludedUnique, 1);
     assert.equal(data.excludedOccurrences, 2);
 });
 
-test('A-7 inclusion clause: 21-character words determine the display range (specification conflict)', () => {
-    // A-7 also says "21文字以下". Keep this literal expectation failing until the boundary is clarified.
+test('A-7 boundary: a 21-character word alone leaves nothing to display', () => {
+    // 21文字だけのとき、表示できる長さが無いことを固定する（旧・包含節テストの置き換え）
     const data = calculateHeatmapData([['a'.repeat(21), 1]], 1);
-    assert.deepEqual(data.lengths, [21]);
+    assert.deepEqual(data.lengths, []);
+    assert.equal(data.excludedUnique, 1);
+    assert.equal(data.excludedOccurrences, 1);
 });
