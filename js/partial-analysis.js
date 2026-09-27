@@ -7,6 +7,8 @@ class PartialAnalysis {
         this.partialData = [];
         this.retryCount = 0;
         this.retryTimer = null;
+        // ホバー中の語句と件数。訳文ではなく値を覚える。
+        this.hovered = null;
     }
 
     // キャンバスを保持し、メッセージだけを切り替える。
@@ -103,14 +105,9 @@ class PartialAnalysis {
             shuffle: true,
             shape: 'diamond',
             hover: (item, dimension, event) => {
-                if (item) {
-                    this.canvas.style.cursor = 'pointer';
-                    this.canvas.title = I18n.t('partial.hover',
-                        { word: item[0], count: counts.get(item[0]) });
-                } else {
-                    this.canvas.style.cursor = 'default';
-                    this.canvas.title = '';
-                }
+                this.hovered = item ? { word: item[0], count: counts.get(item[0]) } : null;
+                this.canvas.style.cursor = item ? 'pointer' : 'default';
+                this.renderHoverTitle();
             }
         };
     }
@@ -156,6 +153,13 @@ class PartialAnalysis {
         this.wordList = wordList;
     }
 
+    // canvasの title は再描画で差し替わらないので、
+    // 言語を切り替えたらここから組み直す。
+    renderHoverTitle() {
+        if (!this.canvas) return;
+        this.canvas.title = this.hovered ? I18n.t('partial.hover', this.hovered) : '';
+    }
+
     // 再描画
     redraw() {
         if (this.wordList.length > 0) {
@@ -167,6 +171,7 @@ class PartialAnalysis {
     cleanup() {
         clearTimeout(this.retryTimer);
         this.retryCount = 0;
+        this.hovered = null;
         if (this.canvas) {
             this.canvas.style.cursor = 'default';
             this.canvas.title = '';

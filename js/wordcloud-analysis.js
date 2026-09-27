@@ -6,6 +6,8 @@ class WordCloudAnalysis {
         this.canvasSetup = null;
         this.retryCount = 0;
         this.retryTimer = null;
+        // ホバー中の語と件数。訳文ではなく値を覚える。
+        this.hovered = null;
     }
 
     // ワードクラウドを描画
@@ -90,14 +92,9 @@ class WordCloudAnalysis {
             shuffle: false,
             shape: 'square',
             hover: (item, dimension, event) => {
-                if (item) {
-                    this.canvas.style.cursor = 'pointer';
-                    this.canvas.title = I18n.t('cloud.hover',
-                        { word: item[0], count: counts.get(item[0]) });
-                } else {
-                    this.canvas.style.cursor = 'default';
-                    this.canvas.title = '';
-                }
+                this.hovered = item ? { word: item[0], count: counts.get(item[0]) } : null;
+                this.canvas.style.cursor = item ? 'pointer' : 'default';
+                this.renderHoverTitle();
             }
         };
     }
@@ -125,6 +122,13 @@ class WordCloudAnalysis {
             rect.width / 2, rect.height / 2);
     }
 
+    // canvasの title は再描画で差し替わらないので、
+    // 言語を切り替えたらここから組み直す。
+    renderHoverTitle() {
+        if (!this.canvas) return;
+        this.canvas.title = this.hovered ? I18n.t('cloud.hover', this.hovered) : '';
+    }
+
     // 再描画（テーマ変更時など）
     redraw() {
         if (this.wordList.length > 0) {
@@ -141,6 +145,7 @@ class WordCloudAnalysis {
     cleanup() {
         clearTimeout(this.retryTimer);
         this.retryCount = 0;
+        this.hovered = null;
         if (this.canvas) {
             this.canvas.style.cursor = 'default';
             this.canvas.title = '';

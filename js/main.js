@@ -122,6 +122,11 @@ class PassCloudApp {
         PassCloudUtils.renderLoading();
         this.updateFileInfo(this.currentFileName);
         this.redrawCurrentView();
+        // canvasの title と body直下のツールチップは、
+        // 再描画しても差し替わらないので個別に組み直す。
+        this.wordCloudAnalysis?.renderHoverTitle();
+        this.partialAnalysis?.renderHoverTitle();
+        this.heatmapAnalysis?.renderTooltip();
     }
 
     // ファイル処理関連のイベントハンドラー

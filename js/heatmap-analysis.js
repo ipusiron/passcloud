@@ -4,6 +4,8 @@ class HeatmapAnalysis {
         this.wordList = wordList;
         this.originalLineCount = originalLineCount;
         this.heatmapData = null;
+        // 表示中のツールチップ。訳文ではなく種別と値を覚える。
+        this.tooltipState = null;
     }
 
     // ヒートマップを描画
@@ -248,14 +250,14 @@ class HeatmapAnalysis {
                 const percentage = e.target.dataset.percentage;
                 
                 if (Number(count) > 0) {
-                    tooltip.textContent = I18n.t('heatmap.tooltip',
-                        { length, freq, count, percentage });
+                    this._rememberTooltip('hover', { length, freq, count, percentage });
                     tooltip.style.display = 'block';
                 }
             });
             
             cell.addEventListener('focus', () => {
-                tooltip.textContent = cell.getAttribute('aria-label');
+                this._rememberTooltip('cell', { length: cell.dataset.length,
+                    freq: cell.dataset.freq, count: cell.dataset.count });
                 tooltip.style.display = 'block';
                 const rect = cell.getBoundingClientRect();
                 tooltip.style.left = Math.max(0, rect.left) + 'px';
@@ -287,6 +289,23 @@ class HeatmapAnalysis {
                 tooltip.style.display = 'none';
             });
         });
+    }
+
+    // ツールチップは body 直下にあり、セルを作り直しても
+    // 差し替わらない。訳文ではなく種別と値を覚えておき、
+    // 言語を切り替えたら renderTooltip() が訳し直す。
+    _rememberTooltip(kind, values) {
+        this.tooltipState = { kind, values };
+        this.renderTooltip();
+    }
+
+    renderTooltip() {
+        const tooltip = document.querySelector('.heatmap-tooltip');
+        const state = this.tooltipState;
+        if (!tooltip || !state) return;
+        tooltip.textContent = state.kind === 'cell'
+            ? I18n.t('heatmap.cellAria', state.values)
+            : I18n.t('heatmap.tooltip', state.values);
     }
 
     // データ更新

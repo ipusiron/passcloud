@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 const I18n = require('../js/i18n.js');
 
@@ -199,4 +200,76 @@ test('slots the scripts write hold no data-i18n of their own', () => {
     // 起動直後にJSが書かないスロットに和文を残さない（render を1回呼ぶ設計にする）。
     assert.match(html, /<div id="loadingIndicator" class="loading" hidden><\/div>/);
     assert.match(fs.readFileSync(path.join(root, 'js/main.js'), 'utf8'), /PassCloudUtils\.renderLoading\(\)/);
+});
+
+// --- 一時的な表示が言語の切り替えに追従するか ---
+// canvas の title と body直下のツールチップは、再描画しても差し替わらない。
+// 訳文を持たせるとその言語のまま残るので、キーと値から組み直せることを縛る。
+function sandbox(name, globals) {
+    const context = vm.createContext(Object.assign({}, globals));
+    vm.runInContext(fs.readFileSync(path.join(root, 'js', name), 'utf8'), context);
+    return context;
+}
+
+// 語彙ではなく「どのキーをいつ引いたか」を見るための差し替え。
+function stubI18n() {
+    const state = { lang: 'ja' };
+    return { state, t: (key, values = {}) => state.lang + '|' + key + '|' + JSON.stringify(values) };
+}
+
+test('the canvas title is rebuilt from the key, not left in the previous language', () => {
+    for (const [name, className, key] of [
+        ['wordcloud-analysis.js', 'WordCloudAnalysis', 'cloud.hover'],
+        ['partial-analysis.js', 'PartialAnalysis', 'partial.hover']
+    ]) {
+        const stub = stubI18n();
+        const context = sandbox(name, { I18n: stub, document: {}, window: {} });
+        const instance = vm.runInContext('new ' + className + '([])', context);
+        instance.canvas = { title: '', style: {} };
+        instance.hovered = { word: 'ninja', count: 29 };
+        instance.renderHoverTitle();
+        assert.equal(instance.canvas.title, 'ja|' + key + '|{"word":"ninja","count":29}', name);
+        stub.state.lang = 'en';
+        instance.renderHoverTitle();
+        assert.equal(instance.canvas.title, 'en|' + key + '|{"word":"ninja","count":29}', name);
+        instance.hovered = null;
+        instance.renderHoverTitle();
+        assert.equal(instance.canvas.title, '', name);
+    }
+});
+
+test('the heatmap tooltip is rebuilt from the key for both the pointer and the keyboard', () => {
+    const stub = stubI18n();
+    const tooltip = { textContent: '', style: {} };
+    const documentStub = { querySelector: selector => (selector === '.heatmap-tooltip' ? tooltip : null) };
+    const context = sandbox('heatmap-analysis.js', { I18n: stub, document: documentStub, window: {} });
+    const instance = vm.runInContext('new HeatmapAnalysis([], 0)', context);
+    instance._rememberTooltip('hover', { length: 8, freq: '1', count: 3, percentage: '0.30' });
+    assert.equal(tooltip.textContent,
+        'ja|heatmap.tooltip|{"length":8,"freq":"1","count":3,"percentage":"0.30"}');
+    // 言語を切り替えただけで、同じ値から訳し直せる。
+    stub.state.lang = 'en';
+    instance.renderTooltip();
+    assert.equal(tooltip.textContent,
+        'en|heatmap.tooltip|{"length":8,"freq":"1","count":3,"percentage":"0.30"}');
+    // キーボードの focus は表示済みの aria-label を読み戻さず、同じ経路で組み直す。
+    instance._rememberTooltip('cell', { length: 8, freq: '1', count: 3 });
+    assert.equal(tooltip.textContent, 'en|heatmap.cellAria|{"length":8,"freq":"1","count":3}');
+});
+
+test('renderTexts rebuilds the transient text and no handler stores a translated string', () => {
+    const main = fs.readFileSync(path.join(root, 'js/main.js'), 'utf8');
+    const body = main.split('renderTexts() {')[1].split('\n    }')[0];
+    for (const call of ['this.wordCloudAnalysis?.renderHoverTitle()',
+        'this.partialAnalysis?.renderHoverTitle()', 'this.heatmapAnalysis?.renderTooltip()']) {
+        assert.ok(body.includes(call), call);
+    }
+    for (const name of ['wordcloud-analysis.js', 'partial-analysis.js']) {
+        const source = fs.readFileSync(path.join(root, 'js', name), 'utf8');
+        assert.doesNotMatch(source, /canvas\.title = I18n\.t\(/, name);
+        assert.equal((source.match(/renderHoverTitle\(\)/g) || []).length, 2, name);
+    }
+    const heatmap = fs.readFileSync(path.join(root, 'js/heatmap-analysis.js'), 'utf8');
+    assert.doesNotMatch(heatmap, /tooltip\.textContent = I18n\.t\(/);
+    assert.doesNotMatch(heatmap, /getAttribute\('aria-label'\)/);
 });
