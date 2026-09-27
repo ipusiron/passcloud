@@ -19,6 +19,10 @@ function cloudContext() {
 }
 
 const Utils = vm.runInContext('PassCloudUtils', cloudContext());
+const library = fs.readFileSync(path.join(root, 'js/wordcloud2.js'), 'utf8');
+
+// 画面での描画領域。幅は1カラムのレイアウトで実測した値。
+const AREA = { width: 1291, height: 600 };
 
 // wordcloud2 の getTextInfo が語ごとに作るオフスクリーンcanvasの面積。
 // 幅 ≒ (0.6×文字数 + 2)×fontSize、高さ = 3×fontSize。
@@ -26,10 +30,14 @@ function offscreenArea(length, fontSize) {
     return 3 * fontSize * fontSize * (Utils.CHAR_WIDTH_RATIO * Math.max(1, length) + 2);
 }
 
+function cloudOptions(list, rect = AREA) {
+    const cloud = vm.runInContext('new WordCloudAnalysis([])', cloudContext());
+    return cloud._getWordCloudOptions(list, rect, false);
+}
+
 test('wordcloud2 still drops a word whose size does not clear minSize', () => {
     // この一式は getTextInfo の足切りが「fontSize <= minSize」であることに乗っている。
     // 同梱ライブラリーを差し替えたら、ここが落ちて気づける。
-    const library = fs.readFileSync(path.join(root, 'js/wordcloud2.js'), 'utf8');
     assert.match(library, /if \(fontSize <= settings\.minSize\) \{\r?\n\s*return false/);
     assert.match(library, /sendEvent\('wordclouddrawn', true, \{/);
 });
@@ -57,38 +65,160 @@ test('the upper clip keeps the offscreen canvas inside the measured limit', () =
     assert.equal(Utils.maxFontSize(8, 0), Utils.maxFontSize(8));
 });
 
-test('the lower clip never blocks shrinkToFit from finishing', () => {
-    // shrinkToFit は weight に 3/4 を掛けて putWord を呼び直す。1未満になったぶんに
-    // 下限を効かせると、サイズが下がらなくなって再帰が終わらない。
-    let weight = 1, steps = 0;
-    while (Utils.clampFontSize(weight, weight * 5, 8, 600) > 6 && steps < 200) {
+test('the size scale is logarithmic, not proportional to the count', () => {
+    // パスワードの出現回数はべき分布である。回数に比例させると、
+    // 上位1語が上限に張り付いて残りが下限へ潰れる。
+    // 最小出現が0、最頻出が1、その間は対数で割りつける。
+    assert.equal(Utils.countRatio(1, 1, 20000), 0);
+    assert.equal(Utils.countRatio(20000, 1, 20000), 1);
+    // 出現回数が10倍になるたびに、同じだけ持ち上がる。
+    const step = Utils.countRatio(10, 1, 10000) - Utils.countRatio(1, 1, 10000);
+    for (const [low, high] of [[1, 10], [10, 100], [100, 1000], [1000, 10000]]) {
+        const got = Utils.countRatio(high, 1, 10000) - Utils.countRatio(low, 1, 10000);
+        assert.ok(Math.abs(got - step) < 1e-9, low + '→' + high + ': ' + got);
+    }
+    // 比例だと、同じ並びで 20000 が1に対して 120 は 0.006 しかない。
+    // 対数なら真ん中あたりに来るので、中位の語が下限へ潰れない。
+    assert.ok(Utils.countRatio(120, 1, 20000) > 0.4);
+    // 全語が同じ回数のとき（重複を落とした辞書ファイル）は全員が最大。
+    assert.equal(Utils.countRatio(1, 1, 1), 1);
+});
+
+test('a bigger count is never drawn smaller', () => {
+    // このツールの主目的は「どれが突出して多いか」を見ることなので、
+    // サイズの単調性が壊れたら機能として壊れている。
+    const counts = [1, 2, 5, 20, 100, 120, 500, 2000, 5000, 12000, 20000];
+    const list = counts.map(count => ['password', count]);
+    const { weightFactor } = cloudOptions(list);
+    for (let i = 1; i < counts.length; i += 1) {
+        assert.ok(weightFactor(counts[i]) > weightFactor(counts[i - 1]),
+            counts[i - 1] + '→' + counts[i] + ': ' +
+            weightFactor(counts[i - 1]) + '→' + weightFactor(counts[i]));
+    }
+    // 文字数が違っても、サイズを決めるのは出現回数だけである。
+    const mixed = [['a', 20000], ['qwertyuiop12345', 1200], ['abc', 5]];
+    const options = cloudOptions(mixed);
+    assert.ok(options.weightFactor(20000) > options.weightFactor(1200));
+    assert.ok(options.weightFactor(1200) > options.weightFactor(5));
+});
+
+test('the size does not saturate at the top of the range', () => {
+    // 直す前は fontSize = min(ceiling, max(8, count × 5)) で、
+    // ceiling が描画領域の高さ600だった。出現120回から上はすべて600pxに張り付き、
+    // そこから先は shrinkToFit の縮め方だけでサイズが決まっていた。
+    const list = [['password', 20000], ['letmein', 5000], ['qwerty', 120]];
+    const { weightFactor } = cloudOptions(list);
+    assert.notEqual(weightFactor(120), weightFactor(20000));
+    assert.notEqual(weightFactor(5000), weightFactor(20000));
+    // 離れた回数どうしは、はっきり差がつく。
+    assert.ok(weightFactor(20000) > weightFactor(120) * 1.5);
+});
+
+test('the most frequent word is the largest and the least frequent sits on the floor', () => {
+    const list = [['password', 20000], ['letmein', 5000], ['ninja', 7], ['abc', 1]];
+    const { weightFactor } = cloudOptions(list);
+    assert.equal(weightFactor(1), WordCloudMinimum());
+    const largest = weightFactor(20000);
+    for (const [, count] of list) assert.ok(weightFactor(count) <= largest);
+    assert.ok(largest > WordCloudMinimum());
+});
+
+function WordCloudMinimum() {
+    return vm.runInContext('WordCloudAnalysis.MIN_FONT_SIZE', cloudContext());
+}
+
+test('the sizes fit the drawing area and stay inside the area budget', () => {
+    const sample = processText(fs.readFileSync(path.join(root, 'sample/passcloud_sample_1000.txt'), 'utf8'));
+    const list = sample.wordList.map(([word, count]) => [word, count]);
+    const { weightFactor } = cloudOptions(list);
+    let ink = 0;
+    for (const [word, count] of list) {
+        const size = weightFactor(count);
+        assert.ok(size <= Utils.wordFitSize(word.length, AREA.width, AREA.height) + 1e-9,
+            word + ': ' + size);
+        ink += Utils.wordInkArea(word.length, size);
+    }
+    assert.ok(ink <= AREA.width * AREA.height * Utils.CLOUD_AREA_FILL + 1e-6, String(ink));
+    // 予算を使い切る側にも寄っている（語数が少ないときに空白だらけにならない）。
+    assert.ok(ink > AREA.width * AREA.height * Utils.CLOUD_AREA_FILL * 0.9, String(ink));
+});
+
+test('fewer words are drawn larger, and the ratios between them do not change', () => {
+    // 全語をひとつの係数で決めるので、語数が減ればサイズは上がり、
+    // 同じ出現回数の組み合わせなら比は変わらない。
+    const counts = [1, 2, 5, 10, 50];
+    const few = counts.map((count, i) => ['word' + i, count]);
+    const many = Array.from({ length: 300 }, (_, i) => ['word' + i, counts[i % counts.length]]);
+    const bigger = cloudOptions(few).weightFactor;
+    const smaller = cloudOptions(many).weightFactor;
+    assert.ok(bigger(50) > smaller(50));
+    assert.ok(bigger(10) > smaller(10));
+    // 下限からの持ち上がり幅の比が、2つの回数の間で一致する。
+    const floor = WordCloudMinimum();
+    const ratio = (factor, count) => (factor(count) - floor) / (factor(50) - floor);
+    for (const count of counts) {
+        assert.ok(Math.abs(ratio(bigger, count) - ratio(smaller, count)) < 1e-9,
+            count + ': ' + ratio(bigger, count) + ' vs ' + ratio(smaller, count));
+    }
+});
+
+test('neither cloud lets wordcloud2 shrink a word behind our back', () => {
+    // wordcloud2 は入りきらない語だけ weight に 3/4 を掛けて置き直す。
+    // 大きい語ほど何度も縮むので、出現回数の順位とサイズの順位がずれる。
+    // 実測: letmein 5,000回が250.6px、password 20,000回が100.4px。
+    // weight を書き換えるのはこの1か所だけなので、切っておけば
+    // weightFactor に渡る値は必ずもとの出現回数になる。
+    assert.match(library,
+        /if \(settings\.shrinkToFit\) \{\r?\n\s*if \(Array\.isArray\(item\)\) \{\r?\n\s*item\[1\] = item\[1\] \* 3 \/ 4/);
+    assert.equal((library.match(/item\[1\] = /g) || []).length, 1);
+    for (const name of ['wordcloud-analysis.js', 'partial-analysis.js']) {
+        const source = fs.readFileSync(path.join(root, 'js', name), 'utf8');
+        assert.match(source, /shrinkToFit: false/, name);
+    }
+});
+
+test('the scale still lets putWord finish if shrinkToFit is switched back on', () => {
+    // shrinkToFit は weight に 3/4 を掛けて putWord を呼び直す。最小出現を
+    // 下回った weight にも下限を効かせると、サイズが下がらず再帰が終わらない。
+    const { weightFactor } = cloudOptions([['password', 29], ['ninja', 1]]);
+    let weight = 1;
+    let steps = 0;
+    while (weightFactor(weight) > 6 && steps < 200) {
         weight *= 3 / 4;
         steps += 1;
     }
     assert.ok(steps < 200, 'shrinkToFit would not terminate: ' + weight);
-    // 1未満は素通し、1以上は上下で止める。
-    assert.equal(Utils.clampFontSize(0.75, 3.75, 8, 600), 3.75);
-    assert.equal(Utils.clampFontSize(1, 5, 8, 600), 8);
-    assert.equal(Utils.clampFontSize(29, 145, 8, 600), 145);
-    assert.equal(Utils.clampFontSize(2000, 10000, 8, 600), 600);
+});
+
+test('the colour of a word comes from its own count, not from the weight passed back', () => {
+    // 直す前は wordcloud2 が渡す weight を、縮む前の最大値と比べていた。
+    // top_20000 では password の最終 weight が 20.07 に対して最大が 20000 なので、
+    // 5語すべてが最下位の色になっていた。
+    const context = cloudContext();
+    const seen = [];
+    context.PassCloudText = { colorIndex: (weight, max, length) => { seen.push([weight, max]); return 0; } };
+    const cloud = vm.runInContext('new WordCloudAnalysis([])', context);
+    const list = [['password', 20000], ['123456', 12000], ['letmein', 5000], ['dragon', 1200]];
+    const options = cloud._getWordCloudOptions(list, AREA, false);
+    // 縮んだあとの weight を渡されても、色は語から引き直す。
+    options.color('password', 20.07);
+    options.color('dragon', 3.1);
+    assert.deepEqual(seen.map(([, max]) => max), [1, 1]);
+    assert.ok(seen[0][0] > seen[1][0], JSON.stringify(seen));
+    assert.equal(seen[0][0], 1);
+    assert.equal(seen[1][0], Utils.countRatio(1200, 1200, 20000));
 });
 
 test('every word reaches a size that wordcloud2 actually draws', () => {
-    const cloud = vm.runInContext('new WordCloudAnalysis([])', cloudContext());
     const list = [['password', 29], ['ninja', 2], ['a', 1], ['qwertyuiop1234', 1]];
-    const options = cloud._getWordCloudOptions(list, { width: 1291, height: 600 }, false);
+    const options = cloudOptions(list);
     for (const [word, count] of list) {
         assert.ok(options.weightFactor(count) > options.minSize, word + '/' + count);
     }
-    // 出現2回以上のサイズは、直す前とまったく同じ5倍のまま（並びを変えない）。
-    for (const count of [2, 3, 29, 100]) assert.equal(options.weightFactor(count), count * 5);
-    // 出現1回は捨てられず、しかも出現2回より小さいままにする。
     assert.ok(options.weightFactor(1) < options.weightFactor(2));
-    // 出現回数がいくら多くても上限で止まる（ここが無いとcanvasが白紙になる）。
-    assert.equal(options.weightFactor(100000), 600);
 });
 
-test('the partial-match cloud is clipped the same way', () => {
+test('the partial-match cloud is sized the same way', () => {
     const partial = vm.runInContext('new PartialAnalysis([])', cloudContext());
     partial.partialData = [['word12', 22], ['abc', 2], ['zzz', 1]];
     partial.canvasSetup = { rect: { width: 1120, height: 600 } };
@@ -96,33 +226,45 @@ test('the partial-match cloud is clipped the same way', () => {
     for (const [word, count] of partial.partialData) {
         assert.ok(options.weightFactor(count) > options.minSize, word + '/' + count);
     }
-    assert.equal(options.weightFactor(22), Math.pow(22, 0.8) * 8);
-    assert.ok(options.weightFactor(1) < options.weightFactor(2));
-    assert.equal(options.weightFactor(1000000), 600);
+    assert.ok(options.weightFactor(22) > options.weightFactor(2));
+    assert.ok(options.weightFactor(2) > options.weightFactor(1));
+    // 菱形に置くので、面積の予算は長方形の半分にする。
+    let ink = 0;
+    for (const [word, count] of partial.partialData) {
+        ink += Utils.wordInkArea(word.length, options.weightFactor(count));
+    }
+    assert.ok(ink <= 1120 * 600 * Utils.CLOUD_AREA_FILL / 2 + 1e-6, String(ink));
 });
 
 test('no word of the bundled sample is dropped for being too small', () => {
     const sample = processText(fs.readFileSync(path.join(root, 'sample/passcloud_sample_1000.txt'), 'utf8'));
     const list = sample.wordList.map(([word, count]) => [word, count]);
-    const cloud = vm.runInContext('new WordCloudAnalysis([])', cloudContext());
-    const options = cloud._getWordCloudOptions(list, { width: 1291, height: 600 }, false);
+    const options = cloudOptions(list);
     // 直す前は、出現1回の17語がここで落ちて黙って消えていた。
     assert.equal(list.filter(([, count]) => count === 1).length, 17);
     assert.deepEqual(list.filter(([, count]) => options.weightFactor(count) <= options.minSize), []);
-    // 出現2回以上のサイズは1つも変わらない。
-    for (const [, count] of list) if (count > 1) assert.equal(options.weightFactor(count), count * 5);
+    // 出現回数の順にサイズが並ぶ（同じ回数どうしは同じ大きさ）。
+    const sorted = [...list].sort((a, b) => a[1] - b[1]);
+    for (let i = 1; i < sorted.length; i += 1) {
+        assert.ok(options.weightFactor(sorted[i][1]) >= options.weightFactor(sorted[i - 1][1]),
+            sorted[i - 1][1] + '→' + sorted[i][1]);
+    }
     // 重複を落としたリスト（全語が出現1回）でも全滅しない。
     const unique = list.map(([word]) => [word, 1]);
-    assert.deepEqual(unique.filter(([, count]) => options.weightFactor(count) <= options.minSize), []);
+    const uniqueOptions = cloudOptions(unique);
+    assert.deepEqual(unique.filter(([, count]) => uniqueOptions.weightFactor(count) <= uniqueOptions.minSize), []);
+    // しかも下限に張り付かず、描画領域に合わせて持ち上がる。
+    assert.ok(uniqueOptions.weightFactor(1) > WordCloudMinimum());
 });
 
-test('both clouds clip the size and say so when nothing could be drawn', () => {
+test('both clouds size the words from the count and say so when nothing could be drawn', () => {
     for (const name of ['wordcloud-analysis.js', 'partial-analysis.js']) {
         const source = fs.readFileSync(path.join(root, 'js', name), 'utf8');
         // 素の定数に戻すと、また上下の両端で壊れる。
         assert.doesNotMatch(source, /weightFactor: \d/, name);
-        assert.match(source, /PassCloudUtils\.clampFontSize\(/, name);
-        assert.match(source, /PassCloudUtils\.maxFontSize\(/, name);
+        assert.match(source, /PassCloudUtils\.cloudFontSizer\(/, name);
+        // 色も出現回数から引く。wordcloud2 が渡す weight は使わない。
+        assert.match(source, /PassCloudUtils\.countRatio\(/, name);
         // 描けた数を数え、0件のときと欠けたときに理由を出す。
         assert.match(source, /addEventListener\('wordclouddrawn'/, name);
         assert.match(source, /addEventListener\('wordcloudstop'/, name);
@@ -138,4 +280,10 @@ test('both clouds clip the size and say so when nothing could be drawn', () => {
             assert.ok(dictionary[key], key);
         }
     }
+    // 0件になる現実的な引き金は「長い語が描画領域に収まらない」ことである。
+    // 語数の多さは0件の理由にならない（下限を割り込む語がないため）。
+    assert.match(I18n.ja['status.cloudNothingDrawn'], /描画領域に収まらない長さ/);
+    assert.match(I18n.en['status.cloudNothingDrawn'], /too long for the drawing area/);
+    assert.match(I18n.ja['status.partialNothingDrawn'], /描画領域に収まらない長さ/);
+    assert.match(I18n.en['status.partialNothingDrawn'], /too long for the drawing area/);
 });

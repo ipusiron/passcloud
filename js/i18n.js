@@ -46,14 +46,14 @@ const I18n = (() => {
         'status.cloudDrawFailed': 'ワードクラウドを描画できませんでした。',
         'status.cloudNothingDrawn':
             'ワードクラウドに1語も入りませんでした。'
-            + '語が多すぎるか、描画領域が小さすぎます。',
+            + '最小の文字サイズでも描画領域に収まらない長さの語しかありません。',
         'status.cloudPartlyDrawn':
             '{total}語のうち{drawn}語を描きました。入りきらなかった語は省いています。',
         'status.partialAreaFailed': '部分一致ワードクラウドの描画領域を用意できませんでした。',
         'status.partialDrawFailed': '部分一致ワードクラウドを描画できませんでした。',
         'status.partialNothingDrawn':
             '部分一致ワードクラウドに1語句も入りませんでした。'
-            + '語句が多すぎるか、描画領域が小さすぎます。',
+            + '最小の文字サイズでも描画領域に収まらない長さの語句しかありません。',
         'status.partialPartlyDrawn':
             '{total}語句のうち{drawn}語句を描きました。'
             + '入りきらなかった語句は省いています。',
@@ -134,7 +134,10 @@ const I18n = (() => {
         'help.cloudStemBody':
             'ONにすると、末尾の数字や記号を除去して正規化します（例：password123 → password）。空になる場合は元の語を保持',
         'help.cloudColorLabel': '色分け',
-        'help.cloudColorBody': '出現頻度が高いほど大きく、濃い色で表示されます',
+        'help.cloudColorBody':
+            '出現頻度が高いほど大きく、濃い色で表示されます。'
+            + '出現回数はべき分布なので、大きさと色は回数の対数に比例させています。'
+            + '描画領域に入りきらなかった語は、縮めずに省いて件数を知らせます',
         'help.cloudHoverLabel': 'インタラクション',
         'help.cloudHoverBody': '単語にマウスカーソルを合わせると出現回数が表示されます',
         'help.partialHeading': '🧩 部分一致ワードクラウド',
@@ -253,14 +256,14 @@ const I18n = (() => {
         'status.cloudDrawFailed': 'The word cloud could not be drawn.',
         'status.cloudNothingDrawn':
             'No word fitted in the word cloud.'
-            + ' There are too many words, or the drawing area is too small.',
+            + ' Every word is too long for the drawing area, even at the smallest font size.',
         'status.cloudPartlyDrawn':
             '{drawn} of {total} words were drawn. The ones that did not fit were left out.',
         'status.partialAreaFailed': 'The drawing area for the partial-match word cloud could not be prepared.',
         'status.partialDrawFailed': 'The partial-match word cloud could not be drawn.',
         'status.partialNothingDrawn':
             'No phrase fitted in the partial-match word cloud.'
-            + ' There are too many phrases, or the drawing area is too small.',
+            + ' Every phrase is too long for the drawing area, even at the smallest font size.',
         'status.partialPartlyDrawn':
             '{drawn} of {total} phrases were drawn. The ones that did not fit were left out.',
 
@@ -341,7 +344,10 @@ const I18n = (() => {
             'When it is on, trailing digits and symbols are stripped to normalize each word'
             + ' (for example, password123 becomes password). A word that would become empty keeps its original form',
         'help.cloudColorLabel': 'Colouring',
-        'help.cloudColorBody': 'The more often a word appears, the larger and the deeper in colour it is drawn',
+        'help.cloudColorBody':
+            'The more often a word appears, the larger and the deeper in colour it is drawn.'
+            + ' Counts follow a power law, so both size and colour go by the logarithm of the count.'
+            + ' A word that does not fit in the drawing area is left out rather than shrunk, and the number is reported',
         'help.cloudHoverLabel': 'Interaction',
         'help.cloudHoverBody': 'Point at a word to see how many times it appears',
         'help.partialHeading': '🧩 Partial-match word cloud',

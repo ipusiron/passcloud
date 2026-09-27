@@ -283,7 +283,42 @@ Note that `frame-ancestors` cannot be applied through a meta element.
 
 ## 📏 Font size in the word cloud
 
-A word is sized in proportion to how often it appears, but the size is clipped at both ends.
+**The property being held is that a word with a higher count is never drawn smaller.**
+What a leaked password list is read for is which entries stand out,
+so a cloud whose sizes disagree with the counts does not visualize anything.
+
+### The scale is logarithmic
+
+Counts follow a power law. In proportion to the count, the single most common word takes everything
+and the rest collapse onto the floor.
+So the least frequent word sits on the floor, the most frequent one takes the largest size,
+and everything between is spread by the **logarithm of the count**.
+Every tenfold increase adds the same amount, which keeps the middle of the list readable.
+
+Measured on a 1696x600 pixel drawing area, with nine words of equal length:
+
+| Count | Size drawn |
+| --- | --- |
+| 20,000 | 116.7px |
+| 2,000 | 91.4px |
+| 500 | 76.2px |
+| 120 | 60.5px |
+| 100 | 58.5px |
+| 20 | 40.9px |
+| 5 | 25.7px |
+| 2 | 15.6px |
+| 1 | 8.0px |
+
+The colour comes off the same scale, and the count is looked up from the word itself
+rather than taken from the value wordcloud2 hands back.
+
+### One factor sizes every word
+
+The largest size is the biggest value that satisfies all three of these at once, found by bisection.
+
+- The ink of all words adds up to no more than 0.3 of the drawing area
+- Every word fits the drawing area (the ink is capped at 0.7 of the shorter side)
+- The offscreen canvas survives even for the longest word
 
 wordcloud2 measures each word on an offscreen canvas three times as tall as the font size,
 and reads its shape back with `getImageData`.
@@ -291,12 +326,22 @@ Once that canvas grows too large, Chrome drops its contents without raising anyt
 So the upper clip keeps the area under 2^28 pixels even for the longest word in the list,
 and the height of the drawing area caps it further.
 
-The lower clip exists because wordcloud2 draws nothing at or below `minSize`.
+The floor exists because wordcloud2 draws nothing at or below `minSize`.
 Without it, a word that appears once disappears in silence (in a dictionary file with the duplicates removed, that is every word).
-Words appearing twice or more keep exactly the size they had.
 
-The number of words actually placed is counted through `wordclouddrawn`,
-and the status line says so when none of them fitted, or when some were left out.
+**Because one factor sizes every word, shrinking the cloud never changes the ratios between words.**
+With few words the largest size goes up instead, so the canvas does not end up mostly blank.
+
+### `shrinkToFit` is off
+
+wordcloud2's `shrinkToFit` multiplies the count of a word that did not fit by 3/4 and places it again.
+**A larger word is shrunk more times, so the order flips.**
+Measured: `letmein` at 5,000 occurrences came out at 250.6 pixels while `password` at 20,000 came out at 100.4.
+That does not combine with sizing the cloud by area first, so it is switched off.
+
+A word that does not fit is left out rather than shrunk.
+The number placed is counted through `wordclouddrawn`, and the status line reports how many were left out,
+or, when none fitted, that every word is too long for the drawing area even at the smallest font size.
 
 ## ⚠️ Cautions
 
@@ -311,7 +356,7 @@ GitHub Actions runs the same tests on every push and pull request.
 Besides the counts for the bundled sample and the boundary cases, the tables, the examples, the images and the directory tree in the README are all verified.
 `test/i18n.test.js` checks that the two dictionaries hold the same keys and that no Japanese was left untranslated in the HTML.
 `test/control-chars.test.js` checks the substitution and that every place printing the input goes through it.
-`test/wordcloud-scale.test.js` checks the font-size clipping and that a reason is shown when no word could be drawn.
+`test/wordcloud-scale.test.js` checks that the size never falls as the count rises, that it does not saturate at the top, that `shrinkToFit` stays off, and that a reason is shown when no word could be drawn.
 
 ## 🔗 Related book
 
@@ -380,7 +425,7 @@ passcloud/                             # the root of the application
 │   ├── readme.test.js                 # recomputes the tables and numbers in the README
 │   ├── stats.test.js                  # checks the statistics and the order of the top 10
 │   ├── text-processor.test.js         # checks the boundaries of loading and stem estimation
-│   └── wordcloud-scale.test.js        # checks the font-size clipping and the notice when nothing was drawn
+│   └── wordcloud-scale.test.js        # checks the size ordering and the notice when nothing was drawn
 ├── .gitignore                         # the Git ignore list
 ├── .nojekyll                          # turns Jekyll off on GitHub Pages
 ├── CLAUDE.md                          # the guide for AI (structure and the rules to keep)

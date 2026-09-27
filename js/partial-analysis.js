@@ -89,29 +89,35 @@ class PartialAnalysis {
             ]
         };
         
-        const maxWeight = Math.max(...this.partialData.map(([, count]) => count));
         const counts = new Map(this.partialData);
-        // 上限は、いちばん長い語句でもオフスクリーンcanvasが
-        // 壊れないところに置く。
-        const longest = this.partialData.reduce((max, [word]) => Math.max(max, word.length), 1);
-        const ceiling = PassCloudUtils.maxFontSize(longest, this.canvasSetup?.rect.height);
+        const tally = this.partialData.map(([, count]) => count);
+        const minCount = Math.min(...tally);
+        const maxCount = Math.max(...tally);
+        const rect = this.canvasSetup?.rect ?? { width: 0, height: 0 };
+        // shape: 'diamond' は置ける範囲が長方形のおよそ半分なので、
+        // 面積の予算もその割合まで落とす。
+        const fontSize = PassCloudUtils.cloudFontSizer(this.partialData, rect.width, rect.height,
+            PartialAnalysis.MIN_FONT_SIZE, PassCloudUtils.CLOUD_AREA_FILL / 2);
         return {
             list: this.partialData.map(([word, count]) => [word, count]),
             gridSize: 6,
-            weightFactor: weight => PassCloudUtils.clampFontSize(weight, Math.pow(weight, 0.8) * 8,
-                PartialAnalysis.MIN_FONT_SIZE, ceiling),
+            weightFactor: fontSize,
             fontFamily: '"Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif',
             fontWeight: 'bold',
-            color: function(word, weight, fontSize) {
+            // 色はもとの出現回数から引く。サイズと同じ対数の目盛りを使う。
+            color: function(word) {
                 const colors = isDarkMode ? colorSchemes.dark : colorSchemes.light;
-                const index = PassCloudText.colorIndex(weight, maxWeight, colors.length);
+                const share = PassCloudUtils.countRatio(counts.get(word) ?? minCount,
+                    minCount, maxCount);
+                const index = PassCloudText.colorIndex(share, 1, colors.length);
                 return colors[Math.min(Math.max(index, 0), colors.length - 1)];
             },
             rotateRatio: 0.35,
             rotationSteps: 3,
             backgroundColor: isDarkMode ? '#1a1a1a' : '#fafafa',
             drawOutOfBound: false,
-            shrinkToFit: true,
+            // 本体のクラウドと同じ理由で切る（shrinkToFit は順位を壊す）。
+            shrinkToFit: false,
             minSize: 10,
             ellipticity: 0.7,
             shuffle: true,

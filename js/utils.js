@@ -101,7 +101,7 @@ class PassCloudUtils {
     // いちばん長い語を基準に、オフスクリーンcanvasが
     // 壊れない fontSize の上限を出す。
     // 描画領域の高さも上限に使う。wordcloud2 は高さ 3×fontSize の箱を
-    // 作るので、高さを超えるサイズはどのみち shrinkToFit が縮める。
+    // 作るので、高さを超えるサイズはどのみち描画領域に入らない。
     // 実際に描けるのは高さの1/3までなので、高さそのものを上限に
     // 置け、3倍の余裕を残したまま巨大な中間canvasを避けられる。
     static maxFontSize(longestWord, areaHeight) {
@@ -112,15 +112,123 @@ class PassCloudUtils {
         return Math.floor(Math.min(safe, drawable));
     }
 
-    // 出現回数から出した素のサイズを、上下で止める。
-    // 下限を置かないと、出現1回の語が minSize 未満になって
-    // 黙って描かれない。上限を置かないと canvas が壊れる。
-    // ただし weight が1未満のときは素通しにする。shrinkToFit が
-    // 3/4 ずつ掛けて呼び直してくるので、ここで下限を効かせると
-    // putWord の再帰が終わらなくなる。
-    static clampFontSize(weight, size, floor, ceiling) {
-        if (weight < 1) return size;
-        return Math.min(ceiling, Math.max(floor, size));
+    // 1行の文字の高さ（大文字の高さ）。実測の目安は fontSize の0.75倍。
+    static INK_HEIGHT_RATIO = 0.75;
+
+    // 語が実際に食う面積。
+    // 箱（幅 (0.6×文字数+2)×fontSize、高さ 3×fontSize）は余白が大きいが、
+    // wordcloud2 が場所取りに使うのは箱ではなく文字のインクの範囲である
+    // （getTextInfo が getImageData で拾う occupied と bounds）。
+    // 語どうしは箱の隙間に入れ子になるので、インクの側で見積もる。
+    static wordInkArea(length, fontSize) {
+        return PassCloudUtils.CHAR_WIDTH_RATIO * Math.max(1, length) *
+            PassCloudUtils.INK_HEIGHT_RATIO * fontSize * fontSize;
+    }
+
+    // 描画領域の辺をいっぱいまで使わずに残す余白。
+    // wordcloud2 は語の箱をグリッドの中心から外へ置いていくので、
+    // 辺と同じ長さの語は端がはみ出して落ちる。落ちるのはいちばん大きい語、
+    // つまりいちばん見せたい語なので、手前で止める。
+    // 実測（Chrome・bold sans・描画領域600px高・語を1つだけ置いて各8回）:
+    // password を95px（インク幅443px）は8/8描けたが、105px（490px）で3/8に落ちた。
+    // 3文字の語でも境目は同じインク幅で、233px（407px）は12/12、283px（495px）は5/12だった。
+    // 境目のインク幅は短いほうの辺の0.74～0.82倍にあたるので、0.7で止める。
+    static WORD_FIT_MARGIN = 0.7;
+
+    // その語が描画領域に置ける最大の fontSize。
+    // putWord は語のインクの幅・高さが描画領域を超えたところで捨てる。
+    // rotateRatio があって語は縦にも寝るため、短いほうの辺で見る。
+    static wordFitSize(length, areaWidth, areaHeight) {
+        const side = Math.min(Number(areaWidth), Number(areaHeight));
+        if (!(side > 0)) return Infinity;
+        return side * PassCloudUtils.WORD_FIT_MARGIN /
+            (PassCloudUtils.CHAR_WIDTH_RATIO * Math.max(1, length));
+    }
+
+    // 出現回数を 0～1 に写す。パスワードの出現回数はべき分布で、
+    // 上位1語が桁違いに多い。回数に比例させると上位が上限に張り付いて
+    // 残りが下限へ潰れるので、対数で写す。
+    // 最小出現の語が0、最頻出の語が1になる。
+    static countRatio(count, minCount, maxCount) {
+        if (!(maxCount > minCount)) return 1;
+        const span = Math.log(maxCount) - Math.log(minCount);
+        const ratio = (Math.log(Number(count)) - Math.log(minCount)) / span;
+        return Math.min(1, Math.max(0, ratio));
+    }
+
+    // 全語のインクの面積の合計を、描画領域の面積の何割まで許すか。
+    // 語は矩形ではなく、wordcloud2 の配置は中心から外へ置いていく貪欲法なので、
+    // 合計が領域と同じでも入りきらない。
+    // 実測（描画領域1696×600px・各5回）で、入りきらない語が出ない最大の値を取った。
+    //   0.3 → 同梱サンプル67語が5回とも67/67（インク13.7%）、
+    //         重複なし400語も5回とも400/400（インク17.5%）
+    //   0.35 → 重複なし400語が396/400まで落ちる
+    //   0.4  → 383/400
+    static CLOUD_AREA_FILL = 0.3;
+
+    // 出現回数から fontSize を出す関数を作る。
+    //
+    // ねらいは「出現回数が多い語は必ず同じか大きく描かれる」こと（サイズの単調性）。
+    // そのために、サイズを決めるのは出現回数だけにし、語ごとの都合では動かさない。
+    //
+    //   size(count) = floor + countRatio(count) × (top − floor)
+    //
+    // top は、次の3つを同時に満たす最大値を二分探索で決める。
+    //   - 全語のインクの面積の合計が、描画領域の面積 × CLOUD_AREA_FILL に収まる
+    //   - どの語も描画領域に収まる（wordFitSize）
+    //   - いちばん長い語でもオフスクリーンcanvasが壊れない（maxFontSize）
+    // 全語をひとつの top で決めるので、縮めても比は崩れない。
+    // 語数が少なければ top は上がり、canvas が空白だらけにならない。
+    static cloudFontSizer(list, areaWidth, areaHeight, floor, fill) {
+        const budgetFill = fill === undefined ? PassCloudUtils.CLOUD_AREA_FILL : fill;
+        const words = list.map(([word, count]) => [String(word).length, Number(count)]);
+        let minCount = Infinity;
+        let maxCount = 0;
+        let longest = 1;
+        for (const [length, count] of words) {
+            if (count < minCount) minCount = count;
+            if (count > maxCount) maxCount = count;
+            if (length > longest) longest = length;
+        }
+        if (!(minCount > 0)) minCount = 1;
+        if (!(maxCount >= minCount)) maxCount = minCount;
+
+        const safe = PassCloudUtils.maxFontSize(longest, areaHeight);
+        const shares = words.map(([length, count]) =>
+            [length, PassCloudUtils.countRatio(count, minCount, maxCount)]);
+        const area = Number(areaWidth) * Number(areaHeight);
+        const budget = area > 0 ? area * budgetFill : Infinity;
+        const fits = top => {
+            let used = 0;
+            for (const [length, share] of shares) {
+                const size = floor + share * (top - floor);
+                if (size > PassCloudUtils.wordFitSize(length, areaWidth, areaHeight)) return false;
+                used += PassCloudUtils.wordInkArea(length, size);
+                if (used > budget) return false;
+            }
+            return true;
+        };
+
+        let low = floor;
+        let high = Math.max(floor, safe);
+        if (fits(high)) {
+            low = high;
+        } else {
+            for (let step = 0; step < 40; step += 1) {
+                const mid = (low + high) / 2;
+                if (fits(mid)) low = mid; else high = mid;
+            }
+        }
+        const top = low;
+
+        return count => {
+            const value = Number(count);
+            // 最小出現を下回る値は、shrinkToFit を戻したときの保険。
+            // 下限より下へ落として、putWord の呼び直しが必ず終わるようにする。
+            if (!(value >= minCount)) return floor * Math.max(0, value) / minCount;
+            return Math.min(safe,
+                floor + PassCloudUtils.countRatio(value, minCount, maxCount) * (top - floor));
+        };
     }
 
     // グリッドパターン描画

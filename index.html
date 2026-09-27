@@ -125,7 +125,7 @@
                             <li><strong data-i18n="help.cloudStemLabel">語幹推定モード</strong>:
                                 <span data-i18n="help.cloudStemBody">ONにすると、末尾の数字や記号を除去して正規化します（例：password123 → password）。空になる場合は元の語を保持</span></li>
                             <li><strong data-i18n="help.cloudColorLabel">色分け</strong>:
-                                <span data-i18n="help.cloudColorBody">出現頻度が高いほど大きく、濃い色で表示されます</span></li>
+                                <span data-i18n="help.cloudColorBody">出現頻度が高いほど大きく、濃い色で表示されます。出現回数はべき分布なので、大きさと色は回数の対数に比例させています。描画領域に入りきらなかった語は、縮めずに省いて件数を知らせます</span></li>
                             <li><strong data-i18n="help.cloudHoverLabel">インタラクション</strong>:
                                 <span data-i18n="help.cloudHoverBody">単語にマウスカーソルを合わせると出現回数が表示されます</span></li>
                         </ul>

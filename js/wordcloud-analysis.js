@@ -78,30 +78,40 @@ class WordCloudAnalysis {
     // WordCloudオプションを取得
     _getWordCloudOptions(sortedWordList, rect, isDarkMode) {
         const colorSchemes = PassCloudUtils.getColorScheme(isDarkMode);
-        const maxWeight = sortedWordList.reduce((max, [, count]) => Math.max(max, count), 0);
         const counts = new Map(sortedWordList);
-        // 上限は、いちばん長い語でもオフスクリーンcanvasが
-        // 壊れないところに置く。普通のリストではこの上限に当たらない。
-        const longest = sortedWordList.reduce((max, [word]) => Math.max(max, word.length), 1);
-        const ceiling = PassCloudUtils.maxFontSize(longest, rect.height);
-        
+        const tally = sortedWordList.map(([, count]) => count);
+        const minCount = Math.min(...tally);
+        const maxCount = Math.max(...tally);
+        // サイズは出現回数だけで決める。描画領域に合わせて全語をまとめて
+        // 縮めるので、出現回数の順位とサイズの順位がずれない。
+        const fontSize = PassCloudUtils.cloudFontSizer(sortedWordList, rect.width, rect.height,
+            WordCloudAnalysis.MIN_FONT_SIZE);
+
         return {
             list: sortedWordList,
             gridSize: 6,
-            weightFactor: weight => PassCloudUtils.clampFontSize(weight, weight * 5,
-                WordCloudAnalysis.MIN_FONT_SIZE, ceiling),
+            weightFactor: fontSize,
             fontFamily: '"Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif',
             fontWeight: 'bold',
-            color: function(word, weight) {
+            // 色も出現回数から引く。wordcloud2 が渡す weight ではなく、
+            // もとの回数を語から引き直す。サイズと同じ対数の目盛りを使うので、
+            // べき分布でも色が最下位のひとつへ固まらない。
+            color: function(word) {
                 const colors = isDarkMode ? colorSchemes.dark : colorSchemes.light;
-                const index = PassCloudText.colorIndex(weight, maxWeight, colors.length);
-                return colors[index];
+                const share = PassCloudUtils.countRatio(counts.get(word) ?? minCount,
+                    minCount, maxCount);
+                return colors[PassCloudText.colorIndex(share, 1, colors.length)];
             },
             rotateRatio: 0.5,
             rotationSteps: 2,
             backgroundColor: isDarkMode ? '#1a1a1a' : '#fafafa',
             drawOutOfBound: false,
-            shrinkToFit: true,
+            // shrinkToFit は入りきらない語だけを 3/4 ずつ縮めて置き直す。
+            // 大きい語ほど何度も縮むので、出現回数の順位が逆転する
+            // （実測: letmein 5,000回が250.6px、password 20,000回が100.4px）。
+            // 先に面積を合わせるこちらの決め方とは両立しないため切る。
+            // 入りきらなかった語は縮めずに省き、status へ件数を出す。
+            shrinkToFit: false,
             minSize: 6,
             ellipticity: 0.65,
             shuffle: false,
