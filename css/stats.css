@@ -192,6 +192,9 @@
 .password {
     direction: ltr;
     unicode-bidi: bidi-override;
+    font-family: 'Space Mono', monospace;
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
 .rank {
@@ -204,12 +207,6 @@
 
 [data-theme="dark"] .rank {
     color: var(--accent);
-}
-
-.password {
-    font-family: 'Space Mono', monospace;
-    font-weight: 600;
-    letter-spacing: 0.5px;
 }
 
 .count {
