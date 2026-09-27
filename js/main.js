@@ -363,6 +363,12 @@ class PassCloudApp {
     }
 
     // 現在のビューを再描画
+    // 言語やテーマを切り替えても、描き直すのはアクティブなタブだけにする。
+    // 隠れたタブには前の言語のDOMが残るが、hidden なので画面にも支援技術にも出ず、
+    // switchView() が開くときに必ず描き直す。
+    // 4タブすべてを描き直すとワードクラウドの再配置が走り、Chromium実測で
+    // 1,005行（795語）=1.1秒、5,000行（3,590語）=7.9秒かかる。見えない文字列を
+    // そろえるために払う額ではない。
     redrawCurrentView() {
         if (this.wordList.length > 0) {
             const activeMode = document.querySelector("#tabs button.active")?.dataset.tab;

@@ -393,3 +393,16 @@ test('a redraw never grabs the focus that was outside the grid', () => {
     instance.draw();
     assert.equal(dom.activeElement, dom.main);
 });
+
+// 隠れたタブに前の言語のDOMが残るのは、開いたときに必ず描き直すから許される。
+// その前提が崩れたら、切り替え直後に古い言語が画面へ出る。
+test('opening a hidden tab always redraws it, so only the active tab follows the language', () => {
+    const main = fs.readFileSync(path.join(root, 'js/main.js'), 'utf8');
+    const switchView = main.split('switchView(mode) {')[1].split('\n    }')[0];
+    assert.ok(switchView.includes('if (this.wordList.length > 0) {'));
+    assert.ok(switchView.includes('this.drawCurrentMode(mode);'));
+    // 再描画はアクティブなタブだけを見る。ここで4タブを回すと切り替えが秒単位になる。
+    const redraw = main.split('redrawCurrentView() {')[1].split('\n    }')[0];
+    assert.ok(redraw.includes('#tabs button.active'));
+    assert.equal((redraw.match(/drawCurrentMode\(/g) || []).length, 1);
+});
