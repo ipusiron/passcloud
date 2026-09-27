@@ -188,6 +188,12 @@
     text-align: right;
 }
 
+/* パスワードは入力そのもの。双方向の並べ替えを起こさず、保存順のまま読ませる。 */
+.password {
+    direction: ltr;
+    unicode-bidi: bidi-override;
+}
+
 .rank {
     white-space: nowrap;
     font-weight: bold;

@@ -330,7 +330,10 @@ main {
 }
 
 /* ファイル情報 */
+/* ファイル名も利用者が読む入力である。パスワードと同じく保存順のまま出す。 */
 .file-info {
+    direction: ltr;
+    unicode-bidi: bidi-override;
     margin: 0.5em 1em;
     font-weight: bold;
     color: var(--text-primary);

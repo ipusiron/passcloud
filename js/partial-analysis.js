@@ -15,7 +15,8 @@ class PartialAnalysis {
         PassCloudUtils.showNoData(panel, this.wordList.length === 0);
         if (this.wordList.length === 0) return;
 
-        this.partialData = this._analyzePartialMatches();
+        this.partialData = this._analyzePartialMatches()
+            .map(([phrase, count]) => [PassCloudUtils.visibleText(phrase), count]);
         const noMatches = this.partialData.length === 0;
         panel.querySelector('.no-matches').hidden = !noMatches;
         panel.querySelector('#partialCloudCanvas-container').hidden = noMatches;

@@ -68,6 +68,7 @@ passcloud/                             # アプリケーションのルート
 │   └── passcloud_sample_1000.txt      # 1,005 行・67 種類のパスワードリスト
 ├── test/                              # node --test で動く自動テスト（依存なし）
 │   ├── contrast.test.js               # 配色が WCAG 4.5:1 以上かを検証する
+│   ├── control-chars.test.js          # 制御文字の可視化と、入力を出す箇所を検証する
 │   ├── format.test.js                 # 1 行に詰め込んだファイルがないかを検証する
 │   ├── heatmap.test.js                # ヒートマップのマトリクスと除外件数を検証する
 │   ├── html.test.js                   # index.html の CSP・meta・id・属性を静的に検証する
@@ -165,6 +166,10 @@ const { ctx, rect, scale } = PassCloudUtils.setupCanvas(canvas);
 - Counts stay integer: deep-copy [word, count] tuples before passing to WordCloud.
 - Keep wordcloud2.js, supplied assets/fonts files, old screenshot, and sample bytes unchanged.
 - Do not construct password text with innerHTML. Use textContent.
+- Anything the user typed or loaded (passwords, extracted phrases, file names) goes through
+  `PassCloudUtils.visibleText()` before it reaches the screen. It rewrites bidi and other
+  invisible characters as `[U+202E]`, so that what is drawn equals what is stored.
+  Substitute at the moment of display only; every count and length stays on the raw string.
 - Do not use inline style/event attributes. Dynamic numeric styles use CSSOM.
 - External requests must stay at zero under HTTP and file://.
 - Stemming removes only trailing non-letters, and retains the original if it would become empty.

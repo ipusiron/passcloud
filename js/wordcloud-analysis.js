@@ -40,7 +40,9 @@ class WordCloudAnalysis {
             if (stemMode) {
                 displayWordList = this._applyStemming();
             }
-            const sortedWordList = displayWordList.map(([word, count]) => [word, count]).sort((a, b) => b[1] - a[1]);
+            const sortedWordList = displayWordList
+                .map(([word, count]) => [PassCloudUtils.visibleText(word), count])
+                .sort((a, b) => b[1] - a[1]);
             
             const isDarkMode = PassCloudUtils.isDarkMode();
             const options = this._getWordCloudOptions(sortedWordList, rect, isDarkMode);

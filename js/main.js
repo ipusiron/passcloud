@@ -189,7 +189,7 @@ class PassCloudApp {
         const fileInfo = document.getElementById("fileInfo");
         if (fileInfo) {
             fileInfo.textContent = this.currentFileName
-                ? I18n.t('file.loaded', { name: this.currentFileName })
+                ? I18n.t('file.loaded', { name: PassCloudUtils.visibleText(this.currentFileName) })
                 : '';
         }
     }

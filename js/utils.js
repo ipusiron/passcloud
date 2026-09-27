@@ -4,6 +4,17 @@ class PassCloudUtils {
     static statusState = null;
     static loadingKey = 'loading.processing';
 
+    // 入力そのものを画面へ出す前に、目に見えない文字を可視の記号へ置き換える。
+    // RLO（U+202E）のような双方向制御文字が残っていると、表示だけが並べ替わり、
+    // 保存されている文字列とは違うパスワードに見える（例: pass+RLO+drowssap が
+    // passpassword と読める）。長さ・件数の集計はもとの文字列のまま行う。
+    static INVISIBLE = /[\u0000-\u001F\u007F-\u009F\u00AD\u061C\u180E\u200B-\u200F\u2028\u2029\u202A-\u202E\u2060-\u2064\u2066-\u206F\uFEFF\uFFF9-\uFFFB]/g;
+
+    static visibleText(text) {
+        return String(text).replace(PassCloudUtils.INVISIBLE, character =>
+            '[U+' + character.codePointAt(0).toString(16).toUpperCase().padStart(4, '0') + ']');
+    }
+
     // 入力文字列はtextContentで描画する。
     static element(tag, className = '', text = '') {
         const element = document.createElement(tag);

@@ -23,7 +23,7 @@ class StatsAnalysis {
         const content = panel.querySelector('.view-content');
         content.innerHTML = html;
         content.querySelectorAll('.password').forEach((cell, index) => {
-            cell.textContent = this.stats.top10[index].password;
+            cell.textContent = PassCloudUtils.visibleText(this.stats.top10[index].password);
         });
         content.querySelectorAll('.dist-bar').forEach((bar, index) => {
             const percentage = this.stats.lengthDistribution[index].percentage;

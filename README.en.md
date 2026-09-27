@@ -97,6 +97,7 @@ Habits such as **"short and very common"** or **"concentrated at one length"** s
 - Up to 10MB, and about 10,000 lines at most (it depends on the browser)
 - Case is ignored when entries are counted
 - Surrounding spaces are trimmed and blank lines are not counted
+- An invisible control character such as RLO (U+202E) is rewritten as `[U+202E]`, for display only
 
 ---
 
@@ -258,6 +259,20 @@ The library and the web fonts are bundled, so opening the page makes zero extern
 Passwords, extracted phrases and distributions are never written to the console, and the only things kept in localStorage are the theme and the chosen language.
 The top 10 and the word cloud print the passwords as they are, so take care when sharing or photographing the screen.
 
+### How invisible control characters are handled
+
+A password that holds RLO (U+202E, right-to-left override) **is drawn in a different order than it is stored.**
+For example `pass` + RLO + `drowssap` reads as `passpassword` when it is drawn as it is.
+In a tool built for reading passwords, that means the reader copies down the wrong string.
+
+So wherever the input is put in front of the reader, a control character is rewritten as `[U+202E]` first.
+That covers the top 10 table, the word cloud, the partial-match phrases and the name of the loaded file.
+The substitution happens **at the moment of display only**; lengths, counts and frequencies are still measured on the original string.
+The top 10 cells and the file name line also carry `unicode-bidi: bidi-override` in CSS, so that strong right-to-left letters stay in stored order.
+
+The heatmap prints lengths and counts only, so it never touches the input text.
+Reordering inside a canvas cannot be turned off, so the word cloud is handled by removing the control characters instead.
+
 The CSP limits scripts, styles and fonts to the same origin and forbids network access with `connect-src 'none'`.
 `base-uri 'none'`, `form-action 'none'` and `object-src 'none'` are set as well, and no inline event attribute or style attribute is used.
 `referrer` is `no-referrer`.
@@ -275,6 +290,7 @@ Run `npm test` with Node 22 or newer. No package has to be installed.
 GitHub Actions runs the same tests on every push and pull request.
 Besides the counts for the bundled sample and the boundary cases, the tables, the examples, the images and the directory tree in the README are all verified.
 `test/i18n.test.js` checks that the two dictionaries hold the same keys and that no Japanese was left untranslated in the HTML.
+`test/control-chars.test.js` checks the substitution and that every place printing the input goes through it.
 
 ## 🔗 Related book
 
@@ -328,6 +344,7 @@ passcloud/                             # the root of the application
 │   └── passcloud_sample_1000.txt      # 1,005 lines holding 67 distinct passwords
 ├── test/                              # the automated tests that node --test runs (no dependency)
 │   ├── contrast.test.js               # checks that the colours reach WCAG 4.5:1
+│   ├── control-chars.test.js          # checks the substitution and where the input is printed
 │   ├── format.test.js                 # checks that no file was squeezed onto one line
 │   ├── heatmap.test.js                # checks the heatmap matrix and the excluded counts
 │   ├── html.test.js                   # checks the CSP, meta, ids and attributes of index.html

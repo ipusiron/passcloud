@@ -174,6 +174,10 @@ const I18n = (() => {
         'help.inputStructBody': '1行に1パスワード。前後の空白と空行を除き、大文字小文字を区別せずに集計',
         'help.inputSizeLabel': '推奨サイズ',
         'help.inputSizeBody': '10MB以下、最大10,000行程度を推奨（ブラウザー性能による）',
+        'help.inputControlLabel': '制御文字',
+        'help.inputControlBody':
+            'RLO（U+202E）のような目に見えない制御文字は、[U+202E]の形に置き換えて表示します。'
+            + '長さの統計はもとの文字列で数えます',
         'help.inputSampleLabel': 'サンプル',
         'help.inputSampleBody': 'sample/passcloud_sample_1000.txtで動作確認可能',
         'help.privacyHeading': '🔒 プライバシーとセキュリティ',
@@ -368,6 +372,10 @@ const I18n = (() => {
             'One password per line. Surrounding spaces and blank lines are dropped, and case is ignored',
         'help.inputSizeLabel': 'Recommended size',
         'help.inputSizeBody': 'Up to 10MB, and about 10,000 lines at most (it depends on the browser)',
+        'help.inputControlLabel': 'Control characters',
+        'help.inputControlBody':
+            'An invisible control character such as RLO (U+202E) is shown as [U+202E].'
+            + ' The length statistics still count the original string',
         'help.inputSampleLabel': 'Sample',
         'help.inputSampleBody': 'Load sample/passcloud_sample_1000.txt to try it out',
         'help.privacyHeading': '🔒 Privacy and security',
