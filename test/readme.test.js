@@ -77,27 +77,45 @@ function walk(directory, prefix = '') {
         });
 }
 
-test('README tree lists every file and directory, with aligned explanations', () => {
-    const section = readme.split('## 📁 ディレクトリー構造')[1]?.split('## 💻 動作環境')[0];
+function treeBlock(source, from, to, label) {
+    const section = source.split(from)[1]?.split(to)[0];
     const block = section?.match(/\x60\x60\x60\r?\n([\s\S]*?)\r?\n\x60\x60\x60/)?.[1];
-    assert.ok(block);
+    assert.ok(block, label);
+    return block;
+}
+
+// ツリー1枚から、並びを検めながらパスの一覧を組み直す。
+function treePaths(block, label) {
     const lines = block.split(/\r?\n/);
-    assert.equal(lines[0].split(/\s+# /)[0], 'passcloud/');
+    assert.equal(lines[0].split(/\s+# /)[0], 'passcloud/', label);
     const hashColumn = lines[0].indexOf('#');
     const stack = [], paths = [];
     for (const [i, line] of lines.entries()) {
-        assert.match(line, /# \S.+/);
-        assert.equal(line.indexOf('#'), hashColumn, line);
+        assert.match(line, /# \S.+/, label + ': ' + line);
+        assert.equal(line.indexOf('#'), hashColumn, label + ': ' + line);
         if (!i) continue;
         const node = line.slice(0, hashColumn).trimEnd().match(/^([│ ]*)(?:├── |└── )(.+)$/);
-        assert.ok(node, line);
+        assert.ok(node, label + ': ' + line);
         const depth = node[1].length / 4;
         const name = node[2];
-        const relative = stack.slice(0, depth).join('') + name;
-        paths.push(relative);
+        paths.push(stack.slice(0, depth).join('') + name);
         if (name.endsWith('/')) stack[depth] = name;
     }
-    assert.deepEqual(paths.sort(), walk(root).sort());
+    return paths;
+}
+
+// 和文だけ検めると、ファイルを足したときに英語のツリーだけが黙って古くなる。
+test('both README trees list every file and directory, with aligned explanations', () => {
+    const readmeEn = fs.readFileSync(path.join(root, 'README.en.md'), 'utf8');
+    const trees = [
+        ['README.md', treeBlock(readme, '## 📁 ディレクトリー構造', '## 💻 動作環境', 'README.md')],
+        ['README.en.md', treeBlock(readmeEn, '## 📁 Directory structure',
+            '## 💻 Requirements', 'README.en.md')]
+    ];
+    const expected = walk(root).sort();
+    for (const [label, block] of trees) {
+        assert.deepEqual(treePaths(block, label).sort(), expected, label);
+    }
     for (const relative of walk(path.join(root, 'js')).filter(name => name.endsWith('.js') && name !== 'wordcloud2.js')) {
         assert.doesNotMatch(fs.readFileSync(path.join(root, 'js', relative), 'utf8'), /console\.log/);
     }
