@@ -176,7 +176,9 @@ const I18n = (() => {
         'help.inputSizeBody': '10MB以下、最大10,000行程度を推奨（ブラウザー性能による）',
         'help.inputControlLabel': '制御文字',
         'help.inputControlBody':
-            'RLO（U+202E）のような目に見えない制御文字は、[U+202E]の形に置き換えて表示します。'
+            '双方向制御文字（RLO＝U+202E など）とゼロ幅文字、および制御文字を、'
+            + '[U+202E]の形に置き換えて表示します。'
+            + '異体字セレクターとタグ文字は置き換えません。'
             + '長さの統計はもとの文字列で数えます',
         'help.inputSampleLabel': 'サンプル',
         'help.inputSampleBody': 'sample/passcloud_sample_1000.txtで動作確認可能',
@@ -374,7 +376,9 @@ const I18n = (() => {
         'help.inputSizeBody': 'Up to 10MB, and about 10,000 lines at most (it depends on the browser)',
         'help.inputControlLabel': 'Control characters',
         'help.inputControlBody':
-            'An invisible control character such as RLO (U+202E) is shown as [U+202E].'
+            'Bidirectional controls (RLO, U+202E and the like), zero-width characters'
+            + ' and control characters are shown as [U+202E].'
+            + ' Variation selectors and tag characters are left as they are.'
             + ' The length statistics still count the original string',
         'help.inputSampleLabel': 'Sample',
         'help.inputSampleBody': 'Load sample/passcloud_sample_1000.txt to try it out',
