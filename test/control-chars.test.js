@@ -104,6 +104,86 @@ test('the cells that print the input are pinned to logical order in CSS', () => 
     assert.match(base, /\.file-info \{[^}]*direction: ltr;[^}]*unicode-bidi: bidi-override;[^}]*\}/);
 });
 
+// ヘルプが約束する内容と、visibleText() が実際に置き換える文字を突き合わせる。
+// 文言のほうが広くても狭くても落ちるので、同じずれが二度と通らない。
+
+// 文言が名指しする符号位置。U+XXXX 単体と、U+XXXX〜U+XXXX / U+XXXX-U+XXXX の範囲を拾う。
+function namedCodePoints(sentence) {
+    const named = new Set();
+    for (const match of sentence.matchAll(/U\+([0-9A-F]{4})(?:\s*[〜-]\s*U\+([0-9A-F]{4}))?/g)) {
+        const from = parseInt(match[1], 16);
+        const to = match[2] ? parseInt(match[2], 16) : from;
+        for (let cp = from; cp <= to; cp++) named.add(cp);
+    }
+    return named;
+}
+
+// 正規表現を写し取らず、visibleText() を1文字ずつ通した実測で集める。
+function replacedCodePoints() {
+    const replaced = new Set();
+    for (let cp = 0; cp <= 0xFFFF; cp++) {
+        const character = String.fromCharCode(cp);
+        if (visibleText(character) !== character) replaced.add(cp);
+    }
+    return replaced;
+}
+
+const hex = cp => 'U+' + cp.toString(16).toUpperCase().padStart(4, '0');
+const listed = set => [...set].sort((a, b) => a - b).map(hex);
+
+// ヘルプが並べる分類と、それぞれが受け持つ範囲。ここを全部重ねると実態と一致するはずである。
+const CLASSES = [
+    { ja: '双方向制御文字（RLO＝U+202E など）', en: 'Bidirectional controls such as RLO (U+202E)',
+        ranges: [[0x061C, 0x061C], [0x200E, 0x200F], [0x202A, 0x202E], [0x2066, 0x2069]] },
+    { ja: 'ゼロ幅文字', en: 'zero-width characters',
+        ranges: [[0x180E, 0x180E], [0x200B, 0x200D], [0x2060, 0x2064], [0xFEFF, 0xFEFF]] },
+    { ja: '制御文字', en: 'control characters', ranges: [[0x0000, 0x001F], [0x007F, 0x009F]] },
+    { ja: 'ソフトハイフン', en: 'the soft hyphen', ranges: [[0x00AD, 0x00AD]] },
+    { ja: '行区切りと段落区切り', en: 'the line and paragraph separators', ranges: [[0x2028, 0x2029]] },
+    { ja: 'その他の書式文字', en: 'the remaining format characters',
+        ranges: [[0x206A, 0x206F], [0xFFF9, 0xFFFB]] }
+];
+
+// 分類の並びは文の一部なので、includes ではなく区切りで切り出して突き合わせる。
+// 「制御文字」は「双方向制御文字」の一部でもあり、includes だと抜け落ちても通ってしまう。
+function listedClasses(sentence, language) {
+    if (language === 'ja') return sentence.split('を[U+202E]')[0].split('、');
+    return sentence.split(' are shown as [U+202E]')[0].split(', ')
+        .map(name => name.replace(/^and /, ''));
+}
+
+test('the help names every class that is replaced, in both languages', () => {
+    const I18n = require('../js/i18n.js');
+    for (const language of ['ja', 'en']) {
+        assert.deepEqual(listedClasses(I18n[language]['help.inputControlBody'], language),
+            CLASSES.map(item => item[language]), language);
+    }
+    // 分類の受け持ちをすべて重ねると、実際に置き換わる文字と過不足なく一致する。
+    const covered = new Set();
+    for (const { ranges } of CLASSES) {
+        for (const [from, to] of ranges) for (let cp = from; cp <= to; cp++) covered.add(cp);
+    }
+    assert.deepEqual(listed(covered), listed(replacedCodePoints()));
+});
+
+test('the ranges the help prints are exactly the ranges that are replaced', () => {
+    const I18n = require('../js/i18n.js');
+    const replaced = listed(replacedCodePoints());
+    assert.equal(replaced.length, 99);
+    for (const language of ['ja', 'en']) {
+        // 辞書の一行がそのまま仕様になる。範囲を足し忘れても、書きすぎても落ちる。
+        assert.deepEqual(listed(namedCodePoints(I18n[language]['help.inputControlRangeBody'])),
+            replaced, language);
+    }
+    // READMEの約束も同じ集合であること（前の弾ではヘルプだけを直して食い違った）。
+    for (const [name, marker] of [['README.md', '- 置き換える範囲は'], ['README.en.md', '- The replaced ranges are ']]) {
+        const line = fs.readFileSync(path.join(root, name), 'utf8').split(/\r?\n/)
+            .find(text => text.startsWith(marker));
+        assert.ok(line, name + ': ' + marker);
+        assert.deepEqual(listed(namedCodePoints(line)), replaced, name);
+    }
+});
+
 test('the help explains the substitution in both languages', () => {
     const I18n = require('../js/i18n.js');
     for (const dictionary of [I18n.ja, I18n.en]) {

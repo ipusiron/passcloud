@@ -100,7 +100,8 @@ Habits such as **"short and very common"** or **"concentrated at one length"** s
 - Up to 10MB, and about 10,000 lines at most (it depends on the browser)
 - Case is ignored when entries are counted
 - Surrounding spaces are trimmed and blank lines are not counted
-- An invisible control character such as RLO (U+202E) is rewritten as `[U+202E]`, for display only
+- Bidirectional controls such as RLO (U+202E), zero-width characters, control characters, the soft hyphen, the line and paragraph separators, and the remaining format characters are rewritten as `[U+202E]`, for display only
+- The replaced ranges are U+0000-U+001F, U+007F-U+009F, U+00AD, U+061C, U+180E, U+200B-U+200F, U+2028-U+202E, U+2060-U+2064, U+2066-U+206F, U+FEFF and U+FFF9-U+FFFB (variation selectors and tag characters are left as they are)
 
 ---
 
@@ -268,7 +269,7 @@ A password that holds RLO (U+202E, right-to-left override) **is drawn in a diffe
 For example `pass` + RLO + `drowssap` reads as `passpassword` when it is drawn as it is.
 In a tool built for reading passwords, that means the reader copies down the wrong string.
 
-So wherever the input is put in front of the reader, a control character is rewritten as `[U+202E]` first.
+So wherever the input is put in front of the reader, an invisible character is rewritten as `[U+202E]` first (the ranges it covers are listed under "Input format").
 That covers the top 10 table, the word cloud, the partial-match phrases and the name of the loaded file.
 The substitution happens **at the moment of display only**; lengths, counts and frequencies are still measured on the original string.
 The top 10 cells and the file name line also carry `unicode-bidi: bidi-override` in CSS, so that strong right-to-left letters stay in stored order.

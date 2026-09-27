@@ -190,10 +190,14 @@ const I18n = (() => {
         'help.inputSizeBody': '10MB以下、最大10,000行程度を推奨（ブラウザー性能による）',
         'help.inputControlLabel': '制御文字',
         'help.inputControlBody':
-            '双方向制御文字（RLO＝U+202E など）とゼロ幅文字、および制御文字を、'
-            + '[U+202E]の形に置き換えて表示します。'
-            + '異体字セレクターとタグ文字は置き換えません。'
+            '双方向制御文字（RLO＝U+202E など）、ゼロ幅文字、制御文字、ソフトハイフン、'
+            + '行区切りと段落区切り、その他の書式文字を[U+202E]の形に置き換えて表示します。'
             + '長さの統計はもとの文字列で数えます',
+        'help.inputControlRangeLabel': '置き換える範囲',
+        'help.inputControlRangeBody':
+            'U+0000〜U+001F、U+007F〜U+009F、U+00AD、U+061C、U+180E、U+200B〜U+200F、'
+            + 'U+2028〜U+202E、U+2060〜U+2064、U+2066〜U+206F、U+FEFF、U+FFF9〜U+FFFB。'
+            + '異体字セレクターとタグ文字は置き換えません',
         'help.inputSampleLabel': 'サンプル',
         'help.inputSampleBody': 'sample/passcloud_sample_1000.txtで動作確認可能',
         'help.privacyHeading': '🔒 プライバシーとセキュリティ',
@@ -403,10 +407,14 @@ const I18n = (() => {
         'help.inputSizeBody': 'Up to 10MB, and about 10,000 lines at most (it depends on the browser)',
         'help.inputControlLabel': 'Control characters',
         'help.inputControlBody':
-            'Bidirectional controls (RLO, U+202E and the like), zero-width characters'
-            + ' and control characters are shown as [U+202E].'
-            + ' Variation selectors and tag characters are left as they are.'
-            + ' The length statistics still count the original string',
+            'Bidirectional controls such as RLO (U+202E), zero-width characters, control characters,'
+            + ' the soft hyphen, the line and paragraph separators, and the remaining format characters'
+            + ' are shown as [U+202E]. The length statistics still count the original string',
+        'help.inputControlRangeLabel': 'Replaced ranges',
+        'help.inputControlRangeBody':
+            'U+0000-U+001F, U+007F-U+009F, U+00AD, U+061C, U+180E, U+200B-U+200F, U+2028-U+202E,'
+            + ' U+2060-U+2064, U+2066-U+206F, U+FEFF and U+FFF9-U+FFFB.'
+            + ' Variation selectors and tag characters are left as they are',
         'help.inputSampleLabel': 'Sample',
         'help.inputSampleBody': 'Load sample/passcloud_sample_1000.txt to try it out',
         'help.privacyHeading': '🔒 Privacy and security',
