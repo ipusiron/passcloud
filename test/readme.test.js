@@ -64,9 +64,16 @@ test('README metadata structure, fixed values and image references', () => {
         'repo_url: "https://github.com/ipusiron/passcloud"', 'demo_url: "https://ipusiron.github.io/passcloud/"']) {
         assert.ok(metadata.split(/\r?\n/).includes(value));
     }
-    const images = [...readme.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].map(match => match[1]).filter(src => !/^https?:/.test(src));
-    assert.deepEqual(images, ['assets/screenshot2.png', 'assets/screenshot3.png', 'assets/screenshot4.png']);
-    for (const src of images) assert.ok(fs.existsSync(path.join(root, src)), src);
+    const pictures = source => [...source.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)]
+        .map(match => match[1]).filter(src => !/^https?:/.test(src));
+    const images = pictures(readme);
+    assert.deepEqual(images, ['assets/screenshot2.png', 'assets/screenshot3.png',
+        'assets/screenshot4.png', 'assets/screenshot5.png']);
+    // 英語版が和文の画面を使い回すと、言語の切り替えを画像で示せない。英語版は assets/en/ だけを指す。
+    const imagesEn = pictures(fs.readFileSync(path.join(root, 'README.en.md'), 'utf8'));
+    assert.deepEqual(imagesEn, ['assets/en/screenshot.png', 'assets/en/screenshot2.png',
+        'assets/en/screenshot3.png', 'assets/en/screenshot4.png']);
+    for (const src of [...images, ...imagesEn]) assert.ok(fs.existsSync(path.join(root, src)), src);
 });
 
 function walk(directory, prefix = '') {

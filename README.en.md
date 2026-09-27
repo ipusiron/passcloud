@@ -19,14 +19,17 @@ English · [日本語](README.md)
 
 ## 📸 Screenshots
 
-![Word cloud, light theme](assets/screenshot2.png)
-> *The bundled 1,005-line sample analyzed with stem estimation off.*
+![Word cloud](assets/en/screenshot.png)
+> *The bundled 1,005-line sample analyzed with stem estimation off. The button at the top right switches back to Japanese.*
 
-![Word cloud, dark theme](assets/screenshot3.png)
-> *The same result in the dark theme.*
+![Partial-match word cloud](assets/en/screenshot2.png)
+> *The 19 phrases found around the 61 fixed stems, in the dark theme.*
 
-![Statistics for the sample](assets/screenshot4.png)
+![Statistics for the sample](assets/en/screenshot3.png)
 > *1,005 entries, 67 unique, average length 6.7. The top entry is ninja with 29 occurrences.*
+
+![Length x frequency heatmap](assets/en/screenshot4.png)
+> *The cell for 6 characters and 11-20 occurrences holds 14 of them, the deepest of the grid. Dark theme.*
 
 ---
 
@@ -325,6 +328,11 @@ passcloud/                             # the root of the application
 │   └── workflows/                     # GitHub Actions workflows
 │       └── test.yml                   # runs npm test on push and pull_request
 ├── assets/                            # screenshots and fonts
+│   ├── en/                            # the screens of the English interface (used by README.en.md)
+│   │   ├── screenshot.png             # the word cloud tab (light theme)
+│   │   ├── screenshot2.png            # the partial-match word cloud tab (dark theme)
+│   │   ├── screenshot3.png            # the statistics tab (basic values and the top 10)
+│   │   └── screenshot4.png            # the length x frequency heatmap tab (dark theme)
 │   ├── fonts/                         # self-hosted web fonts (so nothing is fetched)
 │   │   ├── OFL-Orbitron.txt           # SIL Open Font License 1.1 for Orbitron
 │   │   ├── OFL-SpaceMono.txt          # SIL Open Font License 1.1 for Space Mono
@@ -332,9 +340,10 @@ passcloud/                             # the root of the application
 │   │   ├── spacemono-400-latin.woff2  # Space Mono Regular for body text (latin subset)
 │   │   └── spacemono-700-latin.woff2  # Space Mono Bold for body text (latin subset)
 │   ├── screenshot.png                 # the old screen (before the rework; not linked from the README)
-│   ├── screenshot2.png                # word cloud in the light theme (right after the sample was analyzed)
-│   ├── screenshot3.png                # the same state in the dark theme
-│   └── screenshot4.png                # the statistics tab (basic, top 10, distribution by length)
+│   ├── screenshot2.png                # the word cloud tab (light theme)
+│   ├── screenshot3.png                # the partial-match word cloud tab (dark theme)
+│   ├── screenshot4.png                # the statistics tab (basic values and the top 10)
+│   └── screenshot5.png                # the length x frequency heatmap tab (dark theme)
 ├── css/                               # stylesheets (main.css pulls in the rest)
 │   ├── base.css                       # colour variables, font faces and the shared layout
 │   ├── heatmap.css                    # the look of the length x frequency heatmap

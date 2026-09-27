@@ -56,14 +56,17 @@ hub: true
 
 ## 📸 スクリーンショット
 
-![ライトのワードクラウド](assets/screenshot2.png)
-> *サンプル1,005行を語幹推定OFFで分析したワードクラウド。*
+![ワードクラウド](assets/screenshot2.png)
+> *サンプル1,005行を語幹推定OFFで分析したワードクラウド。ヘッダー右上の「English」で英語表示に切り替わる。*
 
-![ダークのワードクラウド](assets/screenshot3.png)
-> *同じ分析結果をダークテーマで表示。*
+![部分一致ワードクラウド](assets/screenshot3.png)
+> *固定の語幹61語に前後する19語句を抜き出したところ。ダークテーマ。*
 
 ![サンプルの統計情報](assets/screenshot4.png)
 > *総数1,005・ユニーク67・平均長6.7、Top10の先頭はninjaが29回。*
+
+![長さ×頻度ヒートマップ](assets/screenshot5.png)
+> *6文字・11-20回のセルが14種類で最も濃い。ダークテーマ。*
 
 ---
 
@@ -361,6 +364,11 @@ passcloud/                             # アプリケーションのルート
 │   └── workflows/                     # GitHub Actions のワークフロー
 │       └── test.yml                   # push と pull_request で npm test を実行する
 ├── assets/                            # スクリーンショットとフォント
+│   ├── en/                            # 英語UIの画面（README.en.md から参照する）
+│   │   ├── screenshot.png             # ワードクラウドのタブ（ライトテーマ）
+│   │   ├── screenshot2.png            # 部分一致ワードクラウドのタブ（ダークテーマ）
+│   │   ├── screenshot3.png            # 統計情報のタブ（基本統計・Top10）
+│   │   └── screenshot4.png            # 長さ×頻度ヒートマップのタブ（ダークテーマ）
 │   ├── fonts/                         # 自前ホストする Web フォント（外部への接続をなくすため）
 │   │   ├── OFL-Orbitron.txt           # Orbitron の SIL Open Font License 1.1
 │   │   ├── OFL-SpaceMono.txt          # Space Mono の SIL Open Font License 1.1
@@ -368,9 +376,10 @@ passcloud/                             # アプリケーションのルート
 │   │   ├── spacemono-400-latin.woff2  # 本文用 Space Mono Regular（latin サブセット）
 │   │   └── spacemono-700-latin.woff2  # 本文用 Space Mono Bold（latin サブセット）
 │   ├── screenshot.png                 # 旧版の画面（改修前。README からは参照していない）
-│   ├── screenshot2.png                # ライトテーマのワードクラウド（サンプルを分析した直後）
-│   ├── screenshot3.png                # 同じ状態のダークテーマ
-│   └── screenshot4.png                # 統計情報のタブ（基本統計・Top10・長さ別分布）
+│   ├── screenshot2.png                # ワードクラウドのタブ（ライトテーマ）
+│   ├── screenshot3.png                # 部分一致ワードクラウドのタブ（ダークテーマ）
+│   ├── screenshot4.png                # 統計情報のタブ（基本統計・Top10）
+│   └── screenshot5.png                # 長さ×頻度ヒートマップのタブ（ダークテーマ）
 ├── css/                               # スタイルシート（main.css が他を読み込む）
 │   ├── base.css                       # 配色の CSS 変数・フォント定義・共通レイアウト
 │   ├── heatmap.css                    # 長さ×頻度ヒートマップの見た目
