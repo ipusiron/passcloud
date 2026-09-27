@@ -273,3 +273,123 @@ test('renderTexts rebuilds the transient text and no handler stores a translated
     assert.doesNotMatch(heatmap, /tooltip\.textContent = I18n\.t\(/);
     assert.doesNotMatch(heatmap, /getAttribute\('aria-label'\)/);
 });
+
+
+// --- 描き直してもキーボードの居場所を失わないか ---
+// 言語やテーマを切り替えると draw() がセルを作り直す。ブラウザーでは、焦点のある要素が
+// 外れると blur が飛び、body 直下のツールチップも閉じる。同じ振る舞いの最小のDOMを組み、
+// 作り直したあとに同じセルへ置き直すことを縛る。
+function fakeHeatmapDom() {
+    const dom = { cells: [], tooltip: null };
+    const body = { tagName: 'BODY', classList: { contains: () => false },
+        appendChild: node => { dom.tooltip = node; } };
+    dom.body = body;
+    dom.activeElement = body;
+
+    const makeCell = values => {
+        const handlers = {};
+        const cell = {
+            tagName: 'TD', dataset: values, style: {},
+            classList: { contains: name => name === 'heatmap-cell' },
+            addEventListener(type, handler) { (handlers[type] = handlers[type] || []).push(handler); },
+            focus() {
+                dom.activeElement = cell;
+                (handlers.focus || []).forEach(handler => handler({ target: cell }));
+            },
+            blur() {
+                dom.activeElement = body;
+                (handlers.blur || []).forEach(handler => handler({ target: cell }));
+            },
+            getBoundingClientRect: () => ({ left: 10, bottom: 20, width: 40, height: 20 })
+        };
+        return cell;
+    };
+
+    const main = { tagName: 'DIV', classList: { contains: name => name === 'heatmap-main' },
+        focus() { dom.activeElement = main; } };
+    dom.main = main;
+
+    const content = {
+        set innerHTML(html) {
+            // 焦点のある要素が作り直されると、ブラウザーはフォーカスを body へ落とす。
+            // セルには blur が飛び、tabindex だけのラッパーは黙って外れる。
+            if (dom.cells.includes(dom.activeElement)) dom.activeElement.blur();
+            else if (dom.activeElement === main) dom.activeElement = body;
+            const cells = /data-length="(\d+)"[\s\S]*?data-freq="([^"]*)"[\s\S]*?data-count="(\d+)"/g;
+            dom.cells = [...html.matchAll(cells)]
+                .map(match => makeCell({ length: match[1], freq: match[2], count: match[3] }));
+        },
+        querySelector: selector => (selector === '.legend-gradient' ? { style: {} } : null),
+        querySelectorAll: () => dom.cells
+    };
+
+    dom.document = {
+        body,
+        get activeElement() { return dom.activeElement; },
+        getElementById: () => ({ querySelector: selector =>
+            (selector === '.view-content' ? content : { hidden: false }) }),
+        createElement: () => ({ className: '', textContent: '', style: {} }),
+        querySelector: selector => {
+            if (selector === '.heatmap-tooltip') return dom.tooltip;
+            if (selector === '.heatmap-main') return main;
+            return null;
+        },
+        querySelectorAll: selector => (selector === '.heatmap-cell' ? dom.cells : [])
+    };
+    return dom;
+}
+
+function heatmapOnFakeDom() {
+    const stub = stubI18n();
+    const dom = fakeHeatmapDom();
+    const context = sandbox('heatmap-analysis.js', {
+        I18n: stub, document: dom.document,
+        window: { scrollY: 0, innerWidth: 1280, innerHeight: 800 },
+        PassCloudUtils: { showNoData() {}, isDarkMode: () => false },
+        PassCloudHeatmap: require('../js/core/heatmap-data.js')
+    });
+    const instance = vm.runInContext('new HeatmapAnalysis([], 0)', context);
+    instance.updateData([['ninja', 12], ['password', 3], ['qwerty', 1], ['dragon', 1]], 17);
+    instance.draw();
+    return { stub, dom, instance };
+}
+
+const seatOf = cell => cell.dataset.length + '/' + cell.dataset.freq;
+
+test('the heatmap puts the keyboard back in the same cell after a redraw', () => {
+    const { stub, dom, instance } = heatmapOnFakeDom();
+    const chosen = dom.cells.find(cell => Number(cell.dataset.count) > 0);
+    assert.ok(chosen);
+    chosen.focus();
+    assert.equal(dom.activeElement, chosen);
+    assert.equal(dom.tooltip.style.display, 'block');
+    const seat = seatOf(chosen);
+
+    stub.state.lang = 'en';
+    instance.draw();
+    instance.renderTooltip();
+
+    // セルは作り直されている（同じオブジェクトのままなら、この試験は何も見ていない）。
+    assert.ok(!dom.cells.includes(chosen));
+    assert.notEqual(dom.activeElement, dom.body);
+    assert.ok(dom.cells.includes(dom.activeElement));
+    assert.equal(seatOf(dom.activeElement), seat);
+    // ツールチップも開いたまま、文言だけが訳し直される。
+    assert.equal(dom.tooltip.style.display, 'block');
+    assert.match(dom.tooltip.textContent, /^en\|heatmap\.cellAria\|/);
+    assert.ok(dom.tooltip.textContent.includes('"length":"' + chosen.dataset.length + '"'));
+});
+
+test('a redraw never grabs the focus that was outside the grid', () => {
+    const { stub, dom, instance } = heatmapOnFakeDom();
+    // どこにもフォーカスが無いなら、描き直しても body のまま。
+    stub.state.lang = 'en';
+    instance.draw();
+    assert.equal(dom.activeElement, dom.body);
+
+    // ラッパーに居るときは、セルを掴まずラッパーへ戻す。
+    dom.main.focus();
+    stub.state.lang = 'ja';
+    instance.draw();
+    assert.equal(dom.activeElement, dom.main);
+});

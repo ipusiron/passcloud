@@ -17,6 +17,9 @@ class HeatmapAnalysis {
             return;
         }
         
+        // セルは作り直されるので、いまフォーカスがどこにあったかを先に控える。
+        const focused = this._focusedTarget();
+        
         // ヒートマップデータを計算
         this.heatmapData = this._calculateHeatmapData();
         
@@ -33,6 +36,37 @@ class HeatmapAnalysis {
         
         // ツールチップのイベントリスナーを追加
         this._addHeatmapTooltips();
+        this._restoreFocus(focused);
+    }
+
+    // 言語やテーマを切り替えると draw() がセルを作り直す。作り直されたセルは
+    // 別の要素なので、ブラウザーはフォーカスを body へ落とし、blur が飛んで
+    // 表示中のツールチップも閉じる。文言だけが訳し直されても、キーボードで
+    // 読んでいる利用者はその場で居場所を失う。
+    // そこで、どのセルを見ていたかを長さと頻度帯で覚え、同じセルへ置き直す。
+    // 頻度帯のラベルは '1' や '2-3' で言語によらないので、切り替えをまたいでも同じ値になる。
+    _focusedTarget() {
+        const active = document.activeElement;
+        if (!active || !active.classList) return null;
+        if (active.classList.contains('heatmap-cell')) {
+            return { kind: 'cell', length: active.dataset.length, freq: active.dataset.freq };
+        }
+        if (active.classList.contains('heatmap-main')) return { kind: 'main' };
+        return null;
+    }
+
+    _restoreFocus(target) {
+        if (!target) return;
+        if (target.kind === 'main') {
+            document.querySelector('.heatmap-main')?.focus();
+            return;
+        }
+        for (const cell of document.querySelectorAll('.heatmap-cell')) {
+            if (cell.dataset.length !== target.length || cell.dataset.freq !== target.freq) continue;
+            // focus を投げ直すと、セルの focus ハンドラーが同じ値でツールチップを開き直す。
+            cell.focus();
+            return;
+        }
     }
 
     // 集計はDOM非依存のモジュールで行う。
