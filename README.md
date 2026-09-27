@@ -37,6 +37,8 @@ hub: true
 
 # PassCloud - パスワードのワードクラウド可視化ツール
 
+[English](README.en.md) · 日本語
+
 ![GitHub Repo stars](https://img.shields.io/github/stars/ipusiron/passcloud?style=social)
 ![GitHub forks](https://img.shields.io/github/forks/ipusiron/passcloud?style=social)
 ![GitHub last commit](https://img.shields.io/github/last-commit/ipusiron/passcloud)
@@ -73,6 +75,8 @@ PassCloudは、流出パスワードや辞書ファイルを対象に、さま�
 - 部分一致ワードクラウド
 - 統計情報
 - 長さ × 頻度ヒートマップ
+
+あわせて、画面の文言を**日本語と英語で切り替え**られます。
 
 ---
 
@@ -140,6 +144,7 @@ PassCloudは、流出パスワードや辞書ファイルを対象に、さま�
 2. パスワードリスト（`.txt` ファイル）をドラッグ＆ドロップ、またはクリックで選択する。
 3. 「📊 分析実行」ボタンを押す。
 4. 表示切替タブで、ワードクラウド／統計／ヒートマップなどを閲覧する。
+5. 右上の「English」ボタンで表示言語を切り替える（`?lang=en`でも指定できる）。
 
 ---
 ### 📁 サンプルファイル
@@ -289,7 +294,7 @@ Top10は出現回数の降順、同数なら辞書順の昇順です。
 
 処理はすべてブラウザー内で完結し、入力データを外部へ送信しません。
 ライブラリーとWebフォントを同梱し、ページを開いたときの外部への通信も0件です。
-パスワード・抽出語句・分布はコンソールへ出力せず、localStorageに保存するのはテーマだけです。
+パスワード・抽出語句・分布はコンソールへ出力せず、localStorageに保存するのはテーマと表示言語の選択だけです。
 Top10とワードクラウドにはパスワードをそのまま表示するため、画面の共有や撮影には注意してください。
 
 CSPはスクリプト・スタイル・フォントを同一配信元に限定し、`connect-src 'none'`で通信を禁止します。
@@ -308,6 +313,7 @@ CSPはスクリプト・スタイル・フォントを同一配信元に限定�
 Node22以上で`npm test`を実行します。依存パッケージのインストールは不要です。
 GitHub Actionsでもpushとpull_requestのたびに同じテストを実行します。
 同梱サンプルと境界値の集計に加え、READMEの表・例・画像・ディレクトリー構造も検証します。
+日英の辞書がそろっているか、HTMLに訳し忘れが残っていないかも`test/i18n.test.js`が検証します。
 
 ## 🔗 関連図書
 
@@ -350,6 +356,7 @@ passcloud/                             # アプリケーションのルート
 │   │   ├── stems.js                   # 既知の語幹 61 語と語幹推定（末尾の数字・記号の除去）
 │   │   └── text-processor.js          # 入力テキストを [パスワード, 出現回数] に畳む
 │   ├── heatmap-analysis.js            # ヒートマップの描画とツールチップ
+│   ├── i18n.js                        # 画面の文言の日英辞書と、切り替え・保存・適用
 │   ├── main.js                        # 画面の組み立て・ファイル入力・タブ切り替え・テーマ
 │   ├── partial-analysis.js            # 部分一致ワードクラウドの描画
 │   ├── stats-analysis.js              # 統計情報の描画
@@ -363,6 +370,7 @@ passcloud/                             # アプリケーションのルート
 │   ├── format.test.js                 # 1 行に詰め込んだファイルがないかを検証する
 │   ├── heatmap.test.js                # ヒートマップのマトリクスと除外件数を検証する
 │   ├── html.test.js                   # index.html の CSP・meta・id・属性を静的に検証する
+│   ├── i18n.test.js                   # 日英の辞書と HTML の訳し忘れを検証する
 │   ├── partial.test.js                # 部分一致の抽出結果と件数を検証する
 │   ├── readme.test.js                 # README の表と数値をコードで再計算して突き合わせる
 │   ├── stats.test.js                  # 統計の数値と Top10 の並びを検証する
@@ -371,6 +379,7 @@ passcloud/                             # アプリケーションのルート
 ├── .nojekyll                          # GitHub Pages の Jekyll 処理を無効にする
 ├── CLAUDE.md                          # AI 向けの開発ガイド（構成と守ること）
 ├── LICENSE                            # 本ツールの MIT ライセンス
+├── README.en.md                       # 英語版のドキュメント
 ├── README.md                          # 本ドキュメント
 ├── index.html                         # 画面のマークアップ
 └── package.json                       # npm test の定義（依存パッケージなし）

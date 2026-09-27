@@ -24,7 +24,7 @@ class WordCloudAnalysis {
             if (this.retryCount++ < 10) {
                 this.retryTimer = setTimeout(() => this.draw(), 100);
             } else {
-                PassCloudUtils.notify('ワードクラウドの描画領域を用意できませんでした。');
+                PassCloudUtils.notify('status.cloudAreaFailed');
             }
             return;
         }
@@ -51,8 +51,8 @@ class WordCloudAnalysis {
             // WordCloud を描画
             WordCloud(this.canvas, options);
         } catch (error) {
-            PassCloudUtils.notify('ワードクラウドを描画できませんでした。');
-            this._drawError(ctx, rect, '描画できませんでした');
+            PassCloudUtils.notify('status.cloudDrawFailed');
+            this._drawError(ctx, rect, I18n.t('cloud.drawFailed'));
         }
     }
 
@@ -90,7 +90,8 @@ class WordCloudAnalysis {
             hover: (item, dimension, event) => {
                 if (item) {
                     this.canvas.style.cursor = 'pointer';
-                    this.canvas.title = `${item[0]}: ${counts.get(item[0])}回`;
+                    this.canvas.title = I18n.t('cloud.hover',
+                        { word: item[0], count: counts.get(item[0]) });
                 } else {
                     this.canvas.style.cursor = 'default';
                     this.canvas.title = '';
@@ -118,7 +119,8 @@ class WordCloudAnalysis {
         ctx.fillStyle = '#ff0000';
         ctx.font = '20px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('エラー: ' + errorMessage, rect.width / 2, rect.height / 2);
+        ctx.fillText(I18n.t('cloud.errorPrefix', { message: errorMessage }),
+            rect.width / 2, rect.height / 2);
     }
 
     // 再描画（テーマ変更時など）

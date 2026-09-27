@@ -6,23 +6,40 @@
     <meta name="referrer" content="no-referrer">
     <meta http-equiv="Content-Security-Policy"
           content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; object-src 'none'">
+    <meta name="description" data-i18n-content="app.description" content="流出パスワードや辞書ファイルをワードクラウド、統計情報、ヒートマップで可視化・分析するWebツール">
+    <meta name="keywords" data-i18n-content="app.keywords" content="パスワード, ワードクラウド, 可視化, 統計, ヒートマップ, セキュリティ, 辞書ファイル">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://ipusiron.github.io/passcloud/">
+    <meta property="og:title" data-i18n-content="app.title" content="PassCloud - パスワードのワードクラウド可視化ツール">
+    <meta property="og:description" data-i18n-content="app.description" content="流出パスワードや辞書ファイルをワードクラウド、統計情報、ヒートマップで可視化・分析するWebツール">
+    <meta property="og:site_name" data-i18n-content="app.siteName" content="PassCloud">
+    <meta property="og:locale" data-i18n-content="app.ogLocale" content="ja_JP">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" data-i18n-content="app.title" content="PassCloud - パスワードのワードクラウド可視化ツール">
+    <meta name="twitter:description" data-i18n-content="app.description" content="流出パスワードや辞書ファイルをワードクラウド、統計情報、ヒートマップで可視化・分析するWebツール">
     <title>PassCloud</title>
     <link rel="stylesheet" href="css/main.css">
+    <script src="js/i18n.js"></script>
     <script src="js/wordcloud2.js"></script>
 </head>
 <body>
-    <noscript>このツールを使うには、ブラウザーーのJavaScriptを有効にしてください。</noscript>
+    <noscript>このツールを使うには、ブラウザーのJavaScriptを有効にしてください。 / Enable JavaScript in your browser to use this tool.</noscript>
     <header>
         <div class="header-content">
             <div>
                 <h1>PassCloud</h1>
-                <p>流出パスワードや辞書ファイルをワードクラウドで可視化</p>
+                <p data-i18n="app.tagline">流出パスワードや辞書ファイルをワードクラウドで可視化</p>
             </div>
             <div class="header-buttons">
-                <button id="helpButton" class="header-button" aria-label="ヘルプ">
+                <button id="langToggle" class="header-button lang-button" type="button"
+                        data-i18n="app.langButton"
+                        data-i18n-aria-label="app.langAria" aria-label="言語を切り替える">English</button>
+                <button id="helpButton" class="header-button"
+                        data-i18n-aria-label="app.helpAria" aria-label="ヘルプ">
                     <span class="button-icon">❓</span>
                 </button>
-                <button id="themeToggle" class="header-button" aria-label="ダークモード切替">
+                <button id="themeToggle" class="header-button"
+                        data-i18n-aria-label="app.themeAria" aria-label="ダークモード切替">
                     <span class="theme-icon">🌙</span>
                 </button>
             </div>
@@ -30,52 +47,62 @@
     </header>
 
     <section id="controls">
-        <div id="tabs" class="tab-buttons" role="tablist" aria-label="分析結果の表示">
-            <button id="tab-cloud" data-tab="cloud" class="active" role="tab" aria-selected="true" aria-controls="cloudView" tabindex="0">ワードクラウド</button>
-            <button id="tab-partial" data-tab="partial" role="tab" aria-selected="false" aria-controls="partialView" tabindex="-1">部分一致ワードクラウド</button>
-            <button id="tab-stats" data-tab="stats" role="tab" aria-selected="false" aria-controls="statsView" tabindex="-1">統計情報</button>
-            <button id="tab-heatmap" data-tab="heatmap" role="tab" aria-selected="false" aria-controls="heatmapView" tabindex="-1">長さ×頻度ヒートマップ</button>
+        <div id="tabs" class="tab-buttons" role="tablist"
+             data-i18n-aria-label="tabs.aria" aria-label="分析結果の表示">
+            <button id="tab-cloud" data-tab="cloud" class="active" role="tab" aria-selected="true"
+                    aria-controls="cloudView" tabindex="0" data-i18n="tabs.cloud">ワードクラウド</button>
+            <button id="tab-partial" data-tab="partial" role="tab" aria-selected="false"
+                    aria-controls="partialView" tabindex="-1" data-i18n="tabs.partial">部分一致ワードクラウド</button>
+            <button id="tab-stats" data-tab="stats" role="tab" aria-selected="false"
+                    aria-controls="statsView" tabindex="-1" data-i18n="tabs.stats">統計情報</button>
+            <button id="tab-heatmap" data-tab="heatmap" role="tab" aria-selected="false"
+                    aria-controls="heatmapView" tabindex="-1" data-i18n="tabs.heatmap">長さ×頻度ヒートマップ</button>
         </div>
         <div id="stemOption">
-            <label><input type="checkbox" id="stemMode"> 語幹推定モード</label>
+            <label><input type="checkbox" id="stemMode">
+                <span data-i18n="controls.stemMode">語幹推定モード</span></label>
         </div>
-        <button id="analyzeButton">📊 分析実行</button>
+        <button id="analyzeButton" data-i18n="controls.analyze">📊 分析実行</button>
     </section>
 
-    <div id="dropZone" class="drop-zone" role="button" tabindex="0" aria-label="テキストファイルを選択">
-        ここにパスワードリスト（.txt）をドラッグ＆ドロップ<br>
-        またはクリックして選択
+    <div id="dropZone" class="drop-zone" role="button" tabindex="0"
+         data-i18n-aria-label="drop.aria" aria-label="テキストファイルを選択">
+        <span data-i18n="drop.line1">ここにパスワードリスト（.txt）をドラッグ＆ドロップ</span><br>
+        <span data-i18n="drop.line2">またはクリックして選択</span>
     </div>
     <input type="file" id="fileInput" accept=".txt" hidden>
     <div id="fileInfo" class="file-info"></div>
 
-    <div id="loadingIndicator" class="loading" hidden>🔄 処理中です…</div>
+    <div id="loadingIndicator" class="loading" hidden></div>
 
     <div id="statusMessage" role="status" aria-live="polite"></div>
 
     <main>
         <div id="cloudView" class="viewPanel" role="tabpanel" aria-labelledby="tab-cloud">
-            <p class="no-data" hidden>データがありません。ファイルを選択して分析を実行してください。</p>
-            <div class="view-content"><canvas id="cloudCanvas" aria-label="パスワードのワードクラウド"></canvas></div>
+            <p class="no-data" hidden data-i18n="view.noData">データがありません。ファイルを選択して分析を実行してください。</p>
+            <div class="view-content"><canvas id="cloudCanvas"
+                    data-i18n-aria-label="cloud.canvasAria" aria-label="パスワードのワードクラウド"></canvas></div>
         </div>
         <div id="partialView" class="viewPanel" role="tabpanel" aria-labelledby="tab-partial" hidden>
-            <p class="no-data" hidden>データがありません。ファイルを選択して分析を実行してください。</p>
+            <p class="no-data" hidden data-i18n="view.noData">データがありません。ファイルを選択して分析を実行してください。</p>
             <div class="view-content"><div class="partial-container">
-                    <h2>🧩 部分一致ワードクラウド</h2>
-                    <p class="partial-description">固定の語幹に前後する語句を可視化します。</p>
+                    <h2 data-i18n="partial.heading">🧩 部分一致ワードクラウド</h2>
+                    <p class="partial-description" data-i18n="partial.description">固定の語幹に前後する語句を可視化します。</p>
                     <p class="partial-info"></p>
-                    <p class="no-matches" hidden>分析対象となる部分一致語句が見つかりませんでした。</p>
+                    <p class="no-matches" hidden
+                       data-i18n="partial.noMatches">分析対象となる部分一致語句が見つかりませんでした。</p>
                     <div id="partialCloudCanvas-container">
-                        <canvas id="partialCloudCanvas" aria-label="部分一致語句のワードクラウド"></canvas>
+                        <canvas id="partialCloudCanvas"
+                                data-i18n-aria-label="partial.canvasAria" aria-label="部分一致語句のワードクラウド"></canvas>
                     </div>
                 </div></div>
         </div>
         <div id="statsView" class="viewPanel" role="tabpanel" aria-labelledby="tab-stats" hidden>
-            <p class="no-data" hidden>データがありません。ファイルを選択して分析を実行してください。</p>
+            <p class="no-data" hidden data-i18n="view.noData">データがありません。ファイルを選択して分析を実行してください。</p>
             <div class="view-content"></div>
         </div>
         <div id="heatmapView" class="viewPanel" role="tabpanel" aria-labelledby="tab-heatmap" hidden>
-            <p class="no-data" hidden>データがありません。ファイルを選択して分析を実行してください。</p>
+            <p class="no-data" hidden data-i18n="view.noData">データがありません。ファイルを選択して分析を実行してください。</p>
             <div class="view-content"></div>
         </div>
     </main>
@@ -85,90 +112,117 @@
         <div class="modal-overlay"></div>
         <div class="modal-content">
             <div class="modal-header">
-                <h2 id="helpTitle">📖 PassCloud ヘルプ</h2>
-                <button class="modal-close" id="helpModalClose" aria-label="ヘルプを閉じる">&times;</button>
+                <h2 id="helpTitle" data-i18n="help.title">📖 PassCloud ヘルプ</h2>
+                <button class="modal-close" id="helpModalClose"
+                        data-i18n-aria-label="help.closeAria" aria-label="ヘルプを閉じる">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="help-content">
                     <section class="help-section">
-                        <h3>🌥 ワードクラウド</h3>
-                        <p>パスワードリスト内で出現頻度の高い単語を、フォントサイズと色の濃淡で可視化します。よく使われているパターンが一目で把握できます。</p>
+                        <h3 data-i18n="help.cloudHeading">🌥 ワードクラウド</h3>
+                        <p data-i18n="help.cloudBody">パスワードリスト内で出現頻度の高い単語を、フォントサイズと色の濃淡で可視化します。よく使われているパターンが一目で把握できます。</p>
                         <ul>
-                            <li><strong>語幹推定モード</strong>: ONにすると、末尾の数字や記号を除去して正規化します（例：password123 → password）。空になる場合は元の語を保持</li>
-                            <li><strong>色分け</strong>: 出現頻度が高いほど大きく、濃い色で表示されます</li>
-                            <li><strong>インタラクション</strong>: 単語にマウスカーソルを合わせると出現回数が表示されます</li>
+                            <li><strong data-i18n="help.cloudStemLabel">語幹推定モード</strong>:
+                                <span data-i18n="help.cloudStemBody">ONにすると、末尾の数字や記号を除去して正規化します（例：password123 → password）。空になる場合は元の語を保持</span></li>
+                            <li><strong data-i18n="help.cloudColorLabel">色分け</strong>:
+                                <span data-i18n="help.cloudColorBody">出現頻度が高いほど大きく、濃い色で表示されます</span></li>
+                            <li><strong data-i18n="help.cloudHoverLabel">インタラクション</strong>:
+                                <span data-i18n="help.cloudHoverBody">単語にマウスカーソルを合わせると出現回数が表示されます</span></li>
                         </ul>
                     </section>
 
                     <section class="help-section">
-                        <h3>🧩 部分一致ワードクラウド</h3>
-                        <p>よく使われる語幹（pass, admin, loveなど）に部分一致するパスワードを対象に、セットで使われている語句を抽出してワードクラウド表示します。</p>
+                        <h3 data-i18n="help.partialHeading">🧩 部分一致ワードクラウド</h3>
+                        <p data-i18n="help.partialBody">よく使われる語幹（pass, admin, loveなど）に部分一致するパスワードを対象に、セットで使われている語句を抽出してワードクラウド表示します。</p>
                         <ul>
-                            <li><strong>語幹リスト</strong>: 固定の語幹リスト61語を使用</li>
-                            <li><strong>抽出対象</strong>: 語幹の前後に付く語句（接頭語・接尾語）</li>
-                            <li><strong>用途</strong>: 推測しやすいパスワードパターンの把握</li>
+                            <li><strong data-i18n="help.partialStemsLabel">語幹リスト</strong>:
+                                <span data-i18n="help.partialStemsBody">固定の語幹リスト61語を使用</span></li>
+                            <li><strong data-i18n="help.partialTargetLabel">抽出対象</strong>:
+                                <span data-i18n="help.partialTargetBody">語幹の前後に付く語句（接頭語・接尾語）</span></li>
+                            <li><strong data-i18n="help.partialUseLabel">用途</strong>:
+                                <span data-i18n="help.partialUseBody">推測しやすいパスワードパターンの把握</span></li>
                         </ul>
                     </section>
 
                     <section class="help-section">
-                        <h3>📊 統計情報</h3>
-                        <p>パスワードリスト全体の特徴を統計データとして数値で表示します。</p>
+                        <h3 data-i18n="help.statsHeading">📊 統計情報</h3>
+                        <p data-i18n="help.statsBody">パスワードリスト全体の特徴を統計データとして数値で表示します。</p>
                         <ul>
-                            <li><strong>基本統計</strong>: 総件数、ユニーク語数、重複率</li>
-                            <li><strong>長さ統計</strong>: 平均長、最短・最長文字数</li>
-                            <li><strong>文字種別</strong>: 数字のみ、英字のみ、英数字混在、特殊文字含む割合</li>
-                            <li><strong>Top 10</strong>: 最頻出パスワードランキング</li>
-                            <li><strong>パターン分析</strong>: 連続数字、キーボード配列、年号含有率</li>
+                            <li><strong data-i18n="help.statsBasicLabel">基本統計</strong>:
+                                <span data-i18n="help.statsBasicBody">総件数、ユニーク語数、重複率</span></li>
+                            <li><strong data-i18n="help.statsLengthLabel">長さ統計</strong>:
+                                <span data-i18n="help.statsLengthBody">平均長、最短・最長文字数</span></li>
+                            <li><strong data-i18n="help.statsCharLabel">文字種別</strong>:
+                                <span data-i18n="help.statsCharBody">数字のみ、英字のみ、英数字混在、特殊文字含む割合</span></li>
+                            <li><strong data-i18n="help.statsTopLabel">Top 10</strong>:
+                                <span data-i18n="help.statsTopBody">最頻出パスワードランキング</span></li>
+                            <li><strong data-i18n="help.statsPatternLabel">パターン分析</strong>:
+                                <span data-i18n="help.statsPatternBody">連続数字、キーボード配列、年号含有率</span></li>
                         </ul>
                     </section>
 
                     <section class="help-section">
-                        <h3>🔥 長さ×頻度ヒートマップ</h3>
-                        <p>パスワードの「長さ」と「出現頻度」の関係を2次元マトリクスで可視化します。</p>
+                        <h3 data-i18n="help.heatHeading">🔥 長さ×頻度ヒートマップ</h3>
+                        <p data-i18n="help.heatBody">パスワードの「長さ」と「出現頻度」の関係を2次元マトリクスで可視化します。</p>
                         <ul>
-                            <li><strong>縦軸</strong>: 20文字以下の語から決定。21文字以上は除外件数を表示</li>
-                            <li><strong>横軸</strong>: 出現頻度の区間（1回、2-3回、4-5回...）</li>
-                            <li><strong>色の濃さ</strong>: その長さ・頻度に該当するユニークパスワード数</li>
-                            <li><strong>ツールチップ</strong>: セルにカーソルを合わせると詳細情報を表示</li>
+                            <li><strong data-i18n="help.heatRowLabel">縦軸</strong>:
+                                <span data-i18n="help.heatRowBody">20文字以下の語から決定。21文字以上は除外件数を表示</span></li>
+                            <li><strong data-i18n="help.heatColLabel">横軸</strong>:
+                                <span data-i18n="help.heatColBody">出現頻度の区間（1回、2-3回、4-5回...）</span></li>
+                            <li><strong data-i18n="help.heatColorLabel">色の濃さ</strong>:
+                                <span data-i18n="help.heatColorBody">その長さ・頻度に該当するユニークパスワード数</span></li>
+                            <li><strong data-i18n="help.heatTipLabel">ツールチップ</strong>:
+                                <span data-i18n="help.heatTipBody">セルにカーソルを合わせると詳細情報を表示</span></li>
                         </ul>
                     </section>
 
                     <section class="help-section">
-                        <h3>📁 使用方法</h3>
+                        <h3 data-i18n="help.usageHeading">📁 使用方法</h3>
                         <ol>
-                            <li><strong>ファイル選択</strong>: パスワードリスト（.txtファイル）をドラッグ&ドロップまたはクリックで選択</li>
-                            <li><strong>分析実行</strong>: 「📊 分析実行」ボタンをクリック</li>
-                            <li><strong>結果確認</strong>: タブを切り替えて各分析結果を確認</li>
-                            <li><strong>テーマ切替</strong>: 右上のボタンでライト/ダークモードを切替</li>
+                            <li><strong data-i18n="help.usageFileLabel">ファイル選択</strong>:
+                                <span data-i18n="help.usageFileBody">パスワードリスト（.txtファイル）をドラッグ&ドロップまたはクリックで選択</span></li>
+                            <li><strong data-i18n="help.usageRunLabel">分析実行</strong>:
+                                <span data-i18n="help.usageRunBody">「📊 分析実行」ボタンをクリック</span></li>
+                            <li><strong data-i18n="help.usageViewLabel">結果確認</strong>:
+                                <span data-i18n="help.usageViewBody">タブを切り替えて各分析結果を確認</span></li>
+                            <li><strong data-i18n="help.usageThemeLabel">テーマ切替</strong>:
+                                <span data-i18n="help.usageThemeBody">右上のボタンでライト/ダークモードを切替</span></li>
                         </ol>
                     </section>
 
                     <section class="help-section">
-                        <h3>📄 入力ファイル仕様</h3>
+                        <h3 data-i18n="help.inputHeading">📄 入力ファイル仕様</h3>
                         <ul>
-                            <li><strong>形式</strong>: UTF-8エンコードの.txtファイル</li>
-                            <li><strong>構造</strong>: 1行に1パスワード。前後の空白と空行を除き、大文字小文字を区別せずに集計</li>
-                            <li><strong>推奨サイズ</strong>: 10MB以下、最大10,000行程度を推奨（ブラウザー性能による）</li>
-                            <li><strong>サンプル</strong>: sample/passcloud_sample_1000.txtで動作確認可能</li>
+                            <li><strong data-i18n="help.inputFormatLabel">形式</strong>:
+                                <span data-i18n="help.inputFormatBody">UTF-8エンコードの.txtファイル</span></li>
+                            <li><strong data-i18n="help.inputStructLabel">構造</strong>:
+                                <span data-i18n="help.inputStructBody">1行に1パスワード。前後の空白と空行を除き、大文字小文字を区別せずに集計</span></li>
+                            <li><strong data-i18n="help.inputSizeLabel">推奨サイズ</strong>:
+                                <span data-i18n="help.inputSizeBody">10MB以下、最大10,000行程度を推奨（ブラウザー性能による）</span></li>
+                            <li><strong data-i18n="help.inputSampleLabel">サンプル</strong>:
+                                <span data-i18n="help.inputSampleBody">sample/passcloud_sample_1000.txtで動作確認可能</span></li>
                         </ul>
                     </section>
 
                     <section class="help-section">
-                        <h3>🔒 プライバシーとセキュリティ</h3>
+                        <h3 data-i18n="help.privacyHeading">🔒 プライバシーとセキュリティ</h3>
                         <ul>
-                            <li><strong>完全クライアント側処理</strong>: アップロードされたファイルは外部サーバーに送信されません</li>
-                            <li><strong>メモリ上での処理</strong>: データはブラウザーのメモリ内でのみ処理され、永続化されません</li>
-                            <li><strong>ローカル実行</strong>: 外部への通信は行いません。同梱ファイルだけで動作します</li>
+                            <li><strong data-i18n="help.privacyClientLabel">完全クライアント側処理</strong>:
+                                <span data-i18n="help.privacyClientBody">アップロードされたファイルは外部サーバーに送信されません</span></li>
+                            <li><strong data-i18n="help.privacyMemoryLabel">メモリ上での処理</strong>:
+                                <span data-i18n="help.privacyMemoryBody">データはブラウザーのメモリ内でのみ処理され、永続化されません</span></li>
+                            <li><strong data-i18n="help.privacyLocalLabel">ローカル実行</strong>:
+                                <span data-i18n="help.privacyLocalBody">外部への通信は行いません。同梱ファイルだけで動作します</span></li>
                         </ul>
                     </section>
 
                     <section class="help-section">
-                        <h3>⚠️ 注意事項</h3>
+                        <h3 data-i18n="help.cautionHeading">⚠️ 注意事項</h3>
                         <ul>
-                            <li>大量のデータを処理する際は、ブラウザーの性能により処理時間が長くなる場合があります</li>
-                            <li>メモリ不足によりブラウザーがクラッシュする可能性があります</li>
-                            <li>このツールは教育・研究目的で作成されています</li>
-                            <li>パスワード分析は適切な権限の下で行ってください</li>
+                            <li data-i18n="help.caution1">大量のデータを処理する際は、ブラウザーの性能により処理時間が長くなる場合があります</li>
+                            <li data-i18n="help.caution2">メモリ不足によりブラウザーがクラッシュする可能性があります</li>
+                            <li data-i18n="help.caution3">このツールは教育・研究目的で作成されています</li>
+                            <li data-i18n="help.caution4">パスワード分析は適切な権限の下で行ってください</li>
                         </ul>
                     </section>
                 </div>

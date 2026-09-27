@@ -1,5 +1,9 @@
 // 共通ユーティリティクラス
 class PassCloudUtils {
+    // 表示中の状態メッセージ（{ key, values }）と、ローディングの文言のキー。
+    static statusState = null;
+    static loadingKey = 'loading.processing';
+
     // 入力文字列はtextContentで描画する。
     static element(tag, className = '', text = '') {
         const element = document.createElement(tag);
@@ -13,16 +17,29 @@ class PassCloudUtils {
         panel.querySelector('.view-content').hidden = noData;
     }
 
-    static notify(message) {
-        document.getElementById('statusMessage').textContent = message;
+    // 表示中のメッセージは訳文ではなくキーで覚える。言語を切り替えても消えず、訳し直される。
+    static notify(key, values = {}) {
+        PassCloudUtils.statusState = key ? { key, values } : null;
+        PassCloudUtils.renderStatus();
+    }
+
+    static renderStatus() {
+        const state = PassCloudUtils.statusState;
+        const el = document.getElementById('statusMessage');
+        if (el) el.textContent = state ? I18n.t(state.key, state.values) : '';
     }
 
     // ローディング表示制御
-    static showLoading(message = "処理中です…") {
+    static showLoading(key = 'loading.processing') {
+        PassCloudUtils.loadingKey = key;
+        PassCloudUtils.renderLoading();
+        document.getElementById("loadingIndicator").hidden = false;
+        this.notify(key);
+    }
+
+    static renderLoading() {
         const el = document.getElementById("loadingIndicator");
-        el.textContent = "🔄 " + message;
-        el.hidden = false;
-        this.notify(message);
+        if (el) el.textContent = "🔄 " + I18n.t(PassCloudUtils.loadingKey);
     }
 
     static hideLoading() {

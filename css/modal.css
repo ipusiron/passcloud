@@ -24,6 +24,15 @@
     justify-content: center;
 }
 
+/* 言語の切り替えボタンだけは文字なので、アイコンのボタンより字を小さく置く */
+.lang-button {
+    font-size: 0.85em;
+    font-weight: bold;
+    letter-spacing: 1px;
+    padding: 0.5em 0.9em;
+    white-space: nowrap;
+}
+
 .header-button:hover {
     background: rgba(255, 255, 255, 0.1);
     transform: scale(1.05);
@@ -31,6 +40,21 @@
 
 .header-button:active {
     transform: scale(0.95);
+}
+
+/* ヘッダーのボタンを絶対配置のままにすると、中間幅でタイトル・サブタイトルに重なる。
+   英語のサブタイトルは和文より長いので、重なりは 1150px あたりまで続く。
+   .header-buttons は modal.css で絶対配置にしているので、打ち消しもここに置く
+   （base.css 側に書いても、あとから読むこのファイルに負けて効かない）。 */
+@media (max-width: 1180px) {
+    .header-content {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .header-buttons {
+        position: static;
+    }
 }
 
 /* モーダル基本スタイル */

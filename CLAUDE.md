@@ -57,6 +57,7 @@ passcloud/                             # アプリケーションのルート
 │   │   ├── stems.js                   # 既知の語幹 61 語と語幹推定（末尾の数字・記号の除去）
 │   │   └── text-processor.js          # 入力テキストを [パスワード, 出現回数] に畳む
 │   ├── heatmap-analysis.js            # ヒートマップの描画とツールチップ
+│   ├── i18n.js                        # 画面の文言の日英辞書と、切り替え・保存・適用
 │   ├── main.js                        # 画面の組み立て・ファイル入力・タブ切り替え・テーマ
 │   ├── partial-analysis.js            # 部分一致ワードクラウドの描画
 │   ├── stats-analysis.js              # 統計情報の描画
@@ -70,6 +71,7 @@ passcloud/                             # アプリケーションのルート
 │   ├── format.test.js                 # 1 行に詰め込んだファイルがないかを検証する
 │   ├── heatmap.test.js                # ヒートマップのマトリクスと除外件数を検証する
 │   ├── html.test.js                   # index.html の CSP・meta・id・属性を静的に検証する
+│   ├── i18n.test.js                   # 日英の辞書と HTML の訳し忘れを検証する
 │   ├── partial.test.js                # 部分一致の抽出結果と件数を検証する
 │   ├── readme.test.js                 # README の表と数値をコードで再計算して突き合わせる
 │   ├── stats.test.js                  # 統計の数値と Top10 の並びを検証する
@@ -78,6 +80,7 @@ passcloud/                             # アプリケーションのルート
 ├── .nojekyll                          # GitHub Pages の Jekyll 処理を無効にする
 ├── CLAUDE.md                          # AI 向けの開発ガイド（構成と守ること）
 ├── LICENSE                            # 本ツールの MIT ライセンス
+├── README.en.md                       # 英語版のドキュメント
 ├── README.md                          # 本ドキュメント
 ├── index.html                         # 画面のマークアップ
 └── package.json                       # npm test の定義（依存パッケージなし）
@@ -101,6 +104,22 @@ passcloud/                             # アプリケーションのルート
 - `constructor(wordList)` / `updateData(wordList)`
 - `draw()` - Renders the visualization
 - `cleanup()` - Removes event listeners/tooltips
+
+### Language System
+- Every string the user reads lives in `js/i18n.js` (`ja` and `en` hold the same key set).
+- `I18n.apply()` fills `data-i18n` (text) and `data-i18n-<attr>` (`aria-label`, `title`,
+  `placeholder`, `alt`, `content`), and sets `document.title` and `documentElement.lang`.
+- Language stored in localStorage key `'passcloud-language'`; `?lang=ja|en` and
+  `navigator.language` are the fallbacks, in that order.
+- `#langToggle` flips the language; `PassCloudApp.renderTexts()` runs on `languagechange`
+  and redraws the current view **without re-analyzing** (a cleared view must stay cleared).
+- Never write a user-visible string straight into `textContent`. Add a key to both
+  dictionaries and call `I18n.t(key, values)` instead.
+- Never put `data-i18n` on an element that has children, on a slot the scripts write
+  (`#fileInfo`, `#loadingIndicator`, `#statusMessage`, `.partial-info`), or on a key that
+  takes a substitution: `apply()` calls `t(key)` with no values.
+- Messages in flight are held as `{ key, values }` (`PassCloudUtils.statusState`), never as
+  the translated string, so that switching the language re-translates them in place.
 
 ### Theme System
 - CSS custom properties defined in `css/base.css`
@@ -139,7 +158,7 @@ const { ctx, rect, scale } = PassCloudUtils.setupCanvas(canvas);
 - UTF-8 `.txt` files, one password per line; maximum 10MB.
 - Input is trimmed and lowercased; blank lines are excluded.
 - Performance limit: ~10,000 lines recommended
-- Japanese UI labels throughout
+- Japanese and English UI, switched at runtime; the wording lives only in `js/i18n.js`
 
 - Keep classic scripts: file:// must work. Do not add ES module declarations.
 - Core files must not reference DOM APIs, browser state, storage, or logging.
@@ -152,3 +171,6 @@ const { ctx, rect, scale } = PassCloudUtils.setupCanvas(canvas);
 - Top10 sorts by count descending and lexical value ascending for ties.
 - Heatmap displays words of at most 20 characters and reports 21+ excluded unique/occurrence counts.
 - README tables and all paths in its annotated directory tree are checked by npm test.
+- README.md and README.en.md must stay in step; both list the same directory tree.
+- Passwords, stems, frequency band labels and pattern examples are the tool's own I/O.
+  They are never translated, and `js/core/` never learns about the dictionary.

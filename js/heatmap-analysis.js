@@ -44,14 +44,16 @@ class HeatmapAnalysis {
         
         return `
             <div class="heatmap-container">
-                <h2>🔥 長さ×頻度ヒートマップ</h2>
+                <h2>${I18n.t('heatmap.heading')}</h2>
                 <p class="heatmap-description">
-                    パスワードの長さと出現頻度の関係を可視化します。<br>
-                    色が濃いほど、その長さ・頻度の組み合わせに該当するユニークなパスワードが多いことを示します。
+                    ${I18n.t('heatmap.desc1')}<br>
+                    ${I18n.t('heatmap.desc2')}
                 </p>
                 
                 <div class="heatmap-wrapper">
-                    ${this.heatmapData.lengths.length ? this._generateMainContent(isDarkMode) : '<p>表示できる長さの語がありません。</p>'}
+                    ${this.heatmapData.lengths.length
+                        ? this._generateMainContent(isDarkMode)
+                        : `<p>${I18n.t('heatmap.empty')}</p>`}
                     ${this._generateLegend(isDarkMode)}
                 </div>
                 ${this._generateSummary()}
@@ -62,10 +64,10 @@ class HeatmapAnalysis {
     // メインコンテンツを生成
     _generateMainContent(isDarkMode) {
         return `
-            <div class="heatmap-main" tabindex="0" aria-label="長さと出現頻度の表。横スクロールできます">
-                <table class="heatmap-grid" aria-label="長さ別、出現頻度帯別のユニークパスワード数">
+            <div class="heatmap-main" tabindex="0" aria-label="${I18n.t('heatmap.mainAria')}">
+                <table class="heatmap-grid" aria-label="${I18n.t('heatmap.gridAria')}">
                     <thead><tr>
-                        <th scope="col">長さ</th>
+                        <th scope="col">${I18n.t('heatmap.colLength')}</th>
                         ${this.heatmapData.frequencyRanges.map(range => `<th scope="col">${range.label}</th>`).join('')}
                     </tr></thead>
                     <tbody>${this._generateHeatmapGrid(isDarkMode)}</tbody>
@@ -78,7 +80,7 @@ class HeatmapAnalysis {
     _generateLegend(isDarkMode) {
         return `
             <div class="heatmap-legend">
-                <div class="legend-title">ユニーク<br>パスワード数</div>
+                <div class="legend-title">${I18n.t('heatmap.legendTitle1')}<br>${I18n.t('heatmap.legendTitle2')}</div>
                 <div class="legend-scale">
                     <div class="legend-max">${this.heatmapData.maxCount}</div>
                     <div class="legend-gradient"></div>
@@ -94,28 +96,32 @@ class HeatmapAnalysis {
             <div class="heatmap-summary-wrapper">
                 <div class="heatmap-stat-card">
                     ${this.heatmapData.excludedUnique > 0
-                        ? `<p>21文字以上: ${this.heatmapData.excludedUnique}種類・延べ${this.heatmapData.excludedOccurrences}回（表示対象外）</p>`
+                        ? `<p>${I18n.t('heatmap.excluded', { unique: this.heatmapData.excludedUnique,
+                            occurrences: this.heatmapData.excludedOccurrences })}</p>`
                         : ''}
-                    <h3>📊 分析サマリー</h3>
+                    <h3>${I18n.t('heatmap.summaryHeading')}</h3>
                     <div class="heatmap-stat-item">
-                        <span>総パスワード数:</span>
+                        <span>${I18n.t('heatmap.totalLabel')}</span>
                         <span>${this.heatmapData.totalPasswords.toLocaleString()}</span>
                     </div>
                     <div class="heatmap-stat-item">
-                        <span>ユニークパスワード数:</span>
+                        <span>${I18n.t('heatmap.uniqueLabel')}</span>
                         <span>${this.heatmapData.uniquePasswords.toLocaleString()}</span>
                     </div>
                     <div class="heatmap-stat-item">
-                        <span>最も多い長さ:</span>
-                        <span>${this.heatmapData.mostCommonLength}文字 (${this.heatmapData.mostCommonLengthCount.toLocaleString()}個)</span>
+                        <span>${I18n.t('heatmap.commonLengthLabel')}</span>
+                        <span>${I18n.t('heatmap.commonLengthValue',
+                            { length: this.heatmapData.mostCommonLength,
+                                count: this.heatmapData.mostCommonLengthCount.toLocaleString() })}</span>
                     </div>
                     <div class="heatmap-stat-item">
-                        <span>最頻出の頻度帯:</span>
+                        <span>${I18n.t('heatmap.commonBandLabel')}</span>
                         <span>${this.heatmapData.mostCommonFreqRange}</span>
                     </div>
                     <div class="heatmap-stat-item">
-                        <span>分析対象範囲:</span>
-                        <span>${this.heatmapData.minLength}〜${this.heatmapData.maxLength}文字</span>
+                        <span>${I18n.t('heatmap.rangeLabel')}</span>
+                        <span>${I18n.t('heatmap.rangeValue', { min: this.heatmapData.minLength,
+                            max: this.heatmapData.maxLength })}</span>
                     </div>
                 </div>
             </div>
@@ -139,12 +145,14 @@ class HeatmapAnalysis {
         const reversedLengths = [...this.heatmapData.lengths].reverse();
         
         reversedMatrix.forEach((row, i) => {
-            html += `<tr><th scope="row">${reversedLengths[i]}文字</th>`;
+            html += `<tr><th scope="row">${I18n.t('heatmap.rowLength',
+                { length: reversedLengths[i] })}</th>`;
             row.forEach((count, j) => {
                 const percentage = totalCells > 0 ? ((count / totalCells) * 100).toFixed(2) : 0;
                 html += `
                     <td class="heatmap-cell" tabindex="0"
-                         aria-label="${reversedLengths[i]}文字、頻度${this.heatmapData.frequencyRanges[j].label}回、${count}種類"
+                         aria-label="${I18n.t('heatmap.cellAria', { length: reversedLengths[i],
+                             freq: this.heatmapData.frequencyRanges[j].label, count })}"
                          data-length="${reversedLengths[i]}"
                          data-freq="${this.heatmapData.frequencyRanges[j].label}"
                          data-count="${count}"
@@ -240,7 +248,8 @@ class HeatmapAnalysis {
                 const percentage = e.target.dataset.percentage;
                 
                 if (Number(count) > 0) {
-                    tooltip.textContent = `${length}文字のパスワード／出現頻度: ${freq}回／該当数: ${count}種類／割合: ${percentage}%`;
+                    tooltip.textContent = I18n.t('heatmap.tooltip',
+                        { length, freq, count, percentage });
                     tooltip.style.display = 'block';
                 }
             });

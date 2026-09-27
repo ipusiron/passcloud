@@ -407,10 +407,6 @@ button, [role="button"] {
         gap: 1rem;
     }
 
-    .header-buttons {
-        position: static;
-    }
-
     #controls {
         padding: 1rem;
         gap: 1rem;

@@ -2,6 +2,7 @@
 class PassCloudApp {
     constructor() {
         this.currentFile = null;
+        this.currentFileName = '';
         this.wordList = [];
         this.originalLineCount = 0;
         
@@ -18,6 +19,8 @@ class PassCloudApp {
     init() {
         this.initTheme();
         this.setupEventListeners();
+        this.setupLanguage();
+        PassCloudUtils.renderLoading();
         this.checkWordCloudLibrary();
     }
 
@@ -103,6 +106,24 @@ class PassCloudApp {
         }
     }
 
+    // 言語の切り替えボタンを配線する。
+    setupLanguage() {
+        const langToggle = document.getElementById('langToggle');
+        if (langToggle) {
+            langToggle.addEventListener('click',
+                () => I18n.setLanguage(I18n.language === 'ja' ? 'en' : 'ja'));
+        }
+        document.addEventListener('languagechange', () => this.renderTexts());
+    }
+
+    // 言語を切り替えても再分析はしない。いま持っている結果を描き直すだけにする。
+    renderTexts() {
+        PassCloudUtils.renderStatus();
+        PassCloudUtils.renderLoading();
+        this.updateFileInfo(this.currentFileName);
+        this.redrawCurrentView();
+    }
+
     // ファイル処理関連のイベントハンドラー
     setupFileHandlers() {
         const dropZone = document.getElementById("dropZone");
@@ -148,43 +169,46 @@ class PassCloudApp {
         if (!/\.txt$/i.test(file.name) || !file.type.startsWith('text/')) {
             this.currentFile = null;
             this.updateFileInfo('');
-            PassCloudUtils.notify('UTF-8のテキストファイル（.txt）を選択してください。');
+            PassCloudUtils.notify('status.invalidType');
             return;
         }
         if (file.size > 10 * 1024 * 1024) {
             this.currentFile = null;
             this.updateFileInfo('');
-            PassCloudUtils.notify('ファイルが大きすぎます（上限10MB）');
+            PassCloudUtils.notify('status.tooLarge');
             return;
         }
         this.currentFile = file;
         this.updateFileInfo(file.name);
-        PassCloudUtils.notify('ファイルを選択しました。「📊 分析実行」を押してください。');
+        PassCloudUtils.notify('status.fileSelected');
     }
 
     // ファイル情報更新
     updateFileInfo(name) {
+        this.currentFileName = name || '';
         const fileInfo = document.getElementById("fileInfo");
         if (fileInfo) {
-            fileInfo.textContent = name ? `📄 読み込み対象: ${name}` : '';
+            fileInfo.textContent = this.currentFileName
+                ? I18n.t('file.loaded', { name: this.currentFileName })
+                : '';
         }
     }
 
     // WordCloudライブラリの確認
     checkWordCloudLibrary() {
         if (typeof WordCloud !== 'function') {
-            PassCloudUtils.notify('WordCloudライブラリーが読み込まれていません。ページを再読み込みしてください。');
+            PassCloudUtils.notify('status.libraryMissing');
         }
     }
 
     // 分析実行
     analyze() {
         if (!this.currentFile) {
-            PassCloudUtils.notify("ファイルが選択されていません。");
+            PassCloudUtils.notify('status.noFile');
             return;
         }
 
-        PassCloudUtils.showLoading("ファイル読み込み中…");
+        PassCloudUtils.showLoading('loading.reading');
 
         const button = document.getElementById('analyzeButton');
         if (button.disabled) return;
@@ -196,12 +220,12 @@ class PassCloudApp {
         const reader = new FileReader();
         reader.onload = (e) => {
             const text = e.target.result;
-            PassCloudUtils.showLoading("分析中…");
+            PassCloudUtils.showLoading('loading.analyzing');
             try {
                 this.processText(text);
             } catch {
                 finish();
-                PassCloudUtils.notify('ファイルを処理できませんでした。UTF-8のテキストを確認してください。');
+                PassCloudUtils.notify('status.processFailed');
                 return;
             }
 
@@ -211,8 +235,8 @@ class PassCloudApp {
             setTimeout(() => {
                 try {
                     this.drawCurrentMode(activeMode);
-                    if (this.wordList.length === 0) PassCloudUtils.notify('空行以外のデータがありません。');
-                    else PassCloudUtils.notify('分析が完了しました。');
+                    if (this.wordList.length === 0) PassCloudUtils.notify('status.empty');
+                    else PassCloudUtils.notify('status.done');
                 } finally {
                     finish();
                 }
@@ -220,7 +244,7 @@ class PassCloudApp {
         };
         reader.onerror = () => {
             finish();
-            PassCloudUtils.notify('ファイルを読み込めませんでした。選び直してください。');
+            PassCloudUtils.notify('status.readFailed');
         };
         reader.onabort = reader.onerror;
         try {
@@ -425,6 +449,7 @@ let passCloudApp = null;
 
 // DOM読み込み完了時の初期化
 document.addEventListener('DOMContentLoaded', () => {
+    I18n.init();
     passCloudApp = new PassCloudApp();
 });
 

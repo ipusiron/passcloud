@@ -20,8 +20,8 @@ class PartialAnalysis {
         panel.querySelector('.no-matches').hidden = !noMatches;
         panel.querySelector('#partialCloudCanvas-container').hidden = noMatches;
         const total = this.partialData.reduce((sum, [, count]) => sum + count, 0);
-        panel.querySelector('.partial-info').textContent =
-            `固定の語幹リスト61語｜抽出された語句数：${this.partialData.length}｜総出現回数：${total.toLocaleString()}`;
+        panel.querySelector('.partial-info').textContent = I18n.t('partial.info',
+            { phrases: this.partialData.length, total: total.toLocaleString() });
         if (!noMatches) this._drawPartialWordCloud();
     }
 
@@ -39,7 +39,7 @@ class PartialAnalysis {
             if (this.retryCount++ < 10) {
                 this.retryTimer = setTimeout(() => this._drawPartialWordCloud(), 100);
             } else {
-                PassCloudUtils.notify('部分一致ワードクラウドの描画領域を用意できませんでした。');
+                PassCloudUtils.notify('status.partialAreaFailed');
             }
             return;
         }
@@ -57,8 +57,8 @@ class PartialAnalysis {
             // WordCloudを描画
             WordCloud(this.canvas, options);
         } catch (error) {
-            PassCloudUtils.notify('部分一致ワードクラウドを描画できませんでした。');
-            this._drawError(ctx, rect, '描画できませんでした');
+            PassCloudUtils.notify('status.partialDrawFailed');
+            this._drawError(ctx, rect, I18n.t('cloud.drawFailed'));
         }
     }
 
@@ -104,7 +104,8 @@ class PartialAnalysis {
             hover: (item, dimension, event) => {
                 if (item) {
                     this.canvas.style.cursor = 'pointer';
-                    this.canvas.title = `"${item[0]}": ${counts.get(item[0])}回出現`;
+                    this.canvas.title = I18n.t('partial.hover',
+                        { word: item[0], count: counts.get(item[0]) });
                 } else {
                     this.canvas.style.cursor = 'default';
                     this.canvas.title = '';
@@ -145,7 +146,8 @@ class PartialAnalysis {
         ctx.fillStyle = '#ff0000';
         ctx.font = '20px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('エラー: ' + errorMessage, rect.width / 2, rect.height / 2);
+        ctx.fillText(I18n.t('cloud.errorPrefix', { message: errorMessage }),
+            rect.width / 2, rect.height / 2);
     }
 
     // データ更新
