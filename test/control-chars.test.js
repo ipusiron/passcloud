@@ -66,8 +66,10 @@ test('the phrases pulled out around a stem are shown the same way', () => {
         if (!INVISIBLE.test(phrase)) continue;
         assert.ok(!INVISIBLE.test(visibleText(phrase)), phrase);
     }
+    // 期待値はリテラルで書く。両辺を同じ式で組み立てると、visibleText が何もしなくても通ってしまう。
+    assert.deepEqual(phrases, [[RLO + 'word12', 2]]);
     assert.deepEqual(phrases.map(([phrase, count]) => [visibleText(phrase), count]),
-        phrases.map(([phrase, count]) => [visibleText(phrase), count]));
+        [['[U+202E]word12', 2]]);
 });
 
 test('every place that prints the input runs it through visibleText', () => {
