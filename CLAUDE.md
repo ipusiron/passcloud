@@ -42,7 +42,6 @@ passcloud/                             # アプリケーションのルート
 │   │   ├── orbitron-700-latin.woff2   # 見出し用 Orbitron Bold（latin サブセット）
 │   │   ├── spacemono-400-latin.woff2  # 本文用 Space Mono Regular（latin サブセット）
 │   │   └── spacemono-700-latin.woff2  # 本文用 Space Mono Bold（latin サブセット）
-│   ├── screenshot.png                 # 旧版の画面（改修前。README からは参照していない）
 │   ├── screenshot2.png                # ワードクラウドのタブ（ライトテーマ）
 │   ├── screenshot3.png                # 部分一致ワードクラウドのタブ（ダークテーマ）
 │   ├── screenshot4.png                # 統計情報のタブ（基本統計・Top10）
@@ -171,7 +170,7 @@ const { ctx, rect, scale } = PassCloudUtils.setupCanvas(canvas);
 - Keep classic scripts: file:// must work. Do not add ES module declarations.
 - Core files must not reference DOM APIs, browser state, storage, or logging.
 - Counts stay integer: deep-copy [word, count] tuples before passing to WordCloud.
-- Keep wordcloud2.js, supplied assets/fonts files, old screenshot, and sample bytes unchanged.
+- Keep wordcloud2.js, supplied assets/fonts files, and sample bytes unchanged.
 - Do not construct password text with innerHTML. Use textContent.
 - Anything the user typed or loaded (passwords, extracted phrases, file names) goes through
   `PassCloudUtils.visibleText()` before it reaches the screen. It rewrites bidi and other

@@ -385,7 +385,6 @@ passcloud/                             # the root of the application
 │   │   ├── orbitron-700-latin.woff2   # Orbitron Bold for headings (latin subset)
 │   │   ├── spacemono-400-latin.woff2  # Space Mono Regular for body text (latin subset)
 │   │   └── spacemono-700-latin.woff2  # Space Mono Bold for body text (latin subset)
-│   ├── screenshot.png                 # the old screen (before the rework; not linked from the README)
 │   ├── screenshot2.png                # the word cloud tab (light theme)
 │   ├── screenshot3.png                # the partial-match word cloud tab (dark theme)
 │   ├── screenshot4.png                # the statistics tab (basic values and the top 10)

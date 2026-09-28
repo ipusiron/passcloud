@@ -418,7 +418,6 @@ passcloud/                             # アプリケーションのルート
 │   │   ├── orbitron-700-latin.woff2   # 見出し用 Orbitron Bold（latin サブセット）
 │   │   ├── spacemono-400-latin.woff2  # 本文用 Space Mono Regular（latin サブセット）
 │   │   └── spacemono-700-latin.woff2  # 本文用 Space Mono Bold（latin サブセット）
-│   ├── screenshot.png                 # 旧版の画面（改修前。README からは参照していない）
 │   ├── screenshot2.png                # ワードクラウドのタブ（ライトテーマ）
 │   ├── screenshot3.png                # 部分一致ワードクラウドのタブ（ダークテーマ）
 │   ├── screenshot4.png                # 統計情報のタブ（基本統計・Top10）
