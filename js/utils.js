@@ -183,6 +183,19 @@ class PassCloudUtils {
     //   0.4  → 383/400
     static CLOUD_AREA_FILL = 0.3;
 
+    // 語長の中央値の何倍を超えたら「桁違いに長い語」とみなすか。
+    static LENGTH_OUTLIER_RATIO = 2;
+
+    // 桁違いに長い語の境目（語長）。これを超える語は wordFitSize が
+    // ほかの語より極端に小さく、その語に合わせると全体が巻き添えで縮む。
+    static lengthOutlier(lengths) {
+        if (!lengths.length) return Infinity;
+        const sorted = [...lengths].sort((a, b) => a - b);
+        const half = sorted.length >> 1;
+        const median = sorted.length % 2 ? sorted[half] : (sorted[half - 1] + sorted[half]) / 2;
+        return median * PassCloudUtils.LENGTH_OUTLIER_RATIO;
+    }
+
     // 出現回数から fontSize を出す関数を作る。
     //
     // ねらいは「出現回数が多い語は必ず同じか大きく描かれる」こと（サイズの単調性）。
@@ -202,6 +215,12 @@ class PassCloudUtils {
     //   - いちばん長い語でもオフスクリーンcanvasが壊れない（maxFontSize）
     // 全語をひとつの top で決めるので、縮めても比は崩れない。
     // 語数が少なければ top は上がり、canvas が空白だらけにならない。
+    //
+    // ただし2つめの「どの語も収まる」は、語長が中央値の
+    // LENGTH_OUTLIER_RATIO 倍を超える語には課さない。top を実際に取るのは
+    // 最頻出の語なので、その語だけが桁違いに長いと、ほかの語まで巻き添えで縮む
+    // （実測: 30文字の語が最頻出だと、canvas のインクが1.31%しかない）。
+    // 外した語は wordcloud2 が置けずに捨て、status の PartlyDrawn が件数を出す。
     static cloudFontSizer(list, areaWidth, areaHeight, floor, fill) {
         const budgetFill = fill === undefined ? PassCloudUtils.CLOUD_AREA_FILL : fill;
         const words = list.map(([word, count]) => [String(word).length, Number(count)]);
@@ -220,14 +239,25 @@ class PassCloudUtils {
         const spread = PassCloudUtils.countSpread(minCount, maxCount);
         const share = count =>
             1 - (1 - PassCloudUtils.countRatio(count, minCount, maxCount)) * spread;
-        const shares = words.map(([length, count]) => [length, share(count)]);
+        const outlier = PassCloudUtils.lengthOutlier(words.map(([length]) => length));
+        const shares = words.map(([length, count]) =>
+            [length, PassCloudUtils.wordFitSize(length, areaWidth, areaHeight),
+                share(count), length > outlier]);
         const area = Number(areaWidth) * Number(areaHeight);
         const budget = area > 0 ? area * budgetFill : Infinity;
+        // 語ごとの上限。size ≦ fit は top ≦ floor + (fit − floor) / share と同じである。
+        let ceiling = Infinity;
+        for (const [, fit, part, isOutlier] of shares) {
+            if (isOutlier || !(part > 0)) continue;
+            const cap = floor + (fit - floor) / part;
+            if (cap < ceiling) ceiling = cap;
+        }
         const fits = top => {
             let used = 0;
-            for (const [length, share] of shares) {
-                const size = floor + share * (top - floor);
-                if (size > PassCloudUtils.wordFitSize(length, areaWidth, areaHeight)) return false;
+            for (const [length, fit, part] of shares) {
+                // 描画領域に収まらない語は置かれずに捨てられるので、
+                // 面積は収まる大きさの分だけ見込む（top が上がっても減らない）。
+                const size = Math.min(floor + part * (top - floor), fit);
                 used += PassCloudUtils.wordInkArea(length, size);
                 if (used > budget) return false;
             }
@@ -235,7 +265,7 @@ class PassCloudUtils {
         };
 
         let low = floor;
-        let high = Math.max(floor, safe);
+        let high = Math.max(floor, Math.min(safe, ceiling));
         if (fits(high)) {
             low = high;
         } else {

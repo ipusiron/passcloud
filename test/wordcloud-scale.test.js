@@ -170,6 +170,45 @@ test('counts that differ by a few percent do not differ by an order of magnitude
     assert.ok(ink > budget * 0.9, String(ink));
 });
 
+test('one word that is far longer than the rest does not shrink the whole cloud', () => {
+    // top を実際に取るのは最頻出の語だけである。その語だけが桁違いに長いと、
+    // その語に合わせた top でほかの語まで巻き添えで縮む。
+    // 実測（直す前）: 30文字の語が最頻出だと canvas のインクが0.70%しかなかった。
+    assert.equal(Utils.lengthOutlier([2, 3, 6, 8, 30]), 12);
+    assert.equal(Utils.lengthOutlier([6, 8]), 14);
+    assert.equal(Utils.lengthOutlier([]), Infinity);
+    const list = [['a'.repeat(30), 100], ['password', 50], ['qwerty', 20], ['abc123', 5], ['xy', 1]];
+    const { weightFactor } = cloudOptions(list);
+    // ほかの語は、自分の描画領域の上限まで戻る。
+    assert.ok(Math.abs(weightFactor(50) - Utils.wordFitSize(8, AREA.width, AREA.height)) < 0.01,
+        String(weightFactor(50)));
+    assert.ok(weightFactor(50) > 80, String(weightFactor(50)));
+    assert.ok(weightFactor(20) > 60, String(weightFactor(20)));
+    // 単調性は保つ。最頻出の語はいちばん大きいままである。
+    const counts = [1, 5, 20, 50, 100];
+    for (let i = 1; i < counts.length; i += 1) {
+        assert.ok(weightFactor(counts[i]) > weightFactor(counts[i - 1]),
+            counts[i - 1] + '→' + counts[i]);
+    }
+    // 長すぎる語のぶんは、描画領域に収まる大きさまでしか面積を見込まない。
+    let ink = 0;
+    for (const [word, count] of list) {
+        ink += Utils.wordInkArea(word.length, Math.min(weightFactor(count),
+            Utils.wordFitSize(word.length, AREA.width, AREA.height)));
+    }
+    assert.ok(ink <= AREA.width * AREA.height * Utils.CLOUD_AREA_FILL + 1e-6, String(ink));
+});
+
+test('when every word is long, none of them is sacrificed', () => {
+    // 語長が似ていれば外れ値はない。全語が描画領域に収まるところで止める。
+    const list = Array.from({ length: 40 }, (_, i) => ['w'.repeat(28 + (i % 3)), 40 - i]);
+    const { weightFactor } = cloudOptions(list);
+    for (const [word, count] of list) {
+        assert.ok(weightFactor(count) <= Utils.wordFitSize(word.length, AREA.width, AREA.height) + 1e-9,
+            word.length + '/' + count + ': ' + weightFactor(count));
+    }
+});
+
 test('counts that span more than a decade keep the sizes they had', () => {
     // 幅の広い入力の見え方は変えない。実測の値をそのまま置く。
     const list = [['passwd', 20000], ['qwerty', 2000], ['letmei', 500],
