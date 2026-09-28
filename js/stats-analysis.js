@@ -8,12 +8,10 @@ class StatsAnalysis {
 
     // 統計情報を描画
     draw() {
-        document.querySelectorAll('.viewPanel').forEach(p => p.style.display = 'none');
         const panel = document.getElementById('statsView');
-        panel.style.display = 'block';
+        PassCloudUtils.showNoData(panel, this.wordList.length === 0);
         
         if (this.wordList.length === 0) {
-            panel.innerHTML = '<p style="text-align: center; margin-top: 50px;">データがありません。ファイルを選択して分析を実行してください。</p>';
             return;
         }
         
@@ -22,96 +20,21 @@ class StatsAnalysis {
         
         // HTMLを生成
         const html = this._generateHTML();
-        panel.innerHTML = html;
+        const content = panel.querySelector('.view-content');
+        content.innerHTML = html;
+        content.querySelectorAll('.password').forEach((cell, index) => {
+            cell.textContent = PassCloudUtils.visibleText(this.stats.top10[index].password);
+        });
+        content.querySelectorAll('.dist-bar').forEach((bar, index) => {
+            const percentage = this.stats.lengthDistribution[index].percentage;
+            bar.style.width = percentage + '%';
+            bar.style.backgroundColor = PassCloudUtils.getBarColor(percentage, PassCloudUtils.isDarkMode());
+        });
     }
 
-    // 統計情報を計算
+    // DOM非依存の集計を呼び出す。
     _calculateStatistics() {
-        const totalPasswords = this.originalLineCount;
-        const uniquePasswords = this.wordList.length;
-        
-        // 長さ統計
-        let totalLength = 0;
-        let minLength = Infinity;
-        let maxLength = 0;
-        const lengthMap = {};
-        
-        // 文字種別統計
-        let numericOnly = 0;
-        let alphaOnly = 0;
-        let alphaNumeric = 0;
-        let withSpecial = 0;
-        
-        // パターン統計
-        let sequential = 0;
-        let keyboard = 0;
-        let years = 0;
-        
-        this.wordList.forEach(([password, count]) => {
-            const len = password.length;
-            const intCount = Math.floor(count);
-            totalLength += len * intCount;
-            minLength = Math.min(minLength, len);
-            maxLength = Math.max(maxLength, len);
-            
-            // 長さ別カウント
-            if (!lengthMap[len]) lengthMap[len] = 0;
-            lengthMap[len] += intCount;
-            
-            // 文字種別判定
-            const hasNumeric = /\d/.test(password);
-            const hasAlpha = /[a-zA-Z]/.test(password);
-            const hasSpecial = /[^a-zA-Z0-9]/.test(password);
-            
-            if (hasNumeric && !hasAlpha && !hasSpecial) numericOnly += intCount;
-            else if (hasAlpha && !hasNumeric && !hasSpecial) alphaOnly += intCount;
-            else if (hasAlpha && hasNumeric && !hasSpecial) alphaNumeric += intCount;
-            else if (hasSpecial) withSpecial += intCount;
-            
-            // パターン判定
-            if (PassCloudUtils.hasSequentialPattern(password)) sequential += intCount;
-            if (PassCloudUtils.hasKeyboardPattern(password)) keyboard += intCount;
-            if (PassCloudUtils.hasYearPattern(password)) years += intCount;
-        });
-        
-        // Top 10
-        const top10 = this.wordList
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10)
-            .map(([password, count]) => ({
-                password,
-                count: Math.floor(count),
-                percentage: ((Math.floor(count) / totalPasswords) * 100).toFixed(2)
-            }));
-        
-        // 長さ分布
-        const lengthDistribution = Object.entries(lengthMap)
-            .sort((a, b) => parseInt(a[0]) - parseInt(b[0]))
-            .map(([length, count]) => ({
-                length: parseInt(length),
-                count,
-                percentage: ((count / totalPasswords) * 100).toFixed(1)
-            }));
-        
-        return {
-            totalPasswords,
-            uniquePasswords,
-            duplicateRate: (((totalPasswords - uniquePasswords) / totalPasswords) * 100).toFixed(1),
-            avgLength: (totalLength / totalPasswords).toFixed(1),
-            minLength,
-            maxLength,
-            numericOnly: ((numericOnly / totalPasswords) * 100).toFixed(1),
-            alphaOnly: ((alphaOnly / totalPasswords) * 100).toFixed(1),
-            alphaNumeric: ((alphaNumeric / totalPasswords) * 100).toFixed(1),
-            withSpecial: ((withSpecial / totalPasswords) * 100).toFixed(1),
-            top10,
-            lengthDistribution,
-            patterns: {
-                sequential: ((sequential / totalPasswords) * 100).toFixed(1),
-                keyboard: ((keyboard / totalPasswords) * 100).toFixed(1),
-                years: ((years / totalPasswords) * 100).toFixed(1)
-            }
-        };
+        return PassCloudStats.calculateStatistics(this.wordList, this.originalLineCount);
     }
 
     // HTMLを生成
@@ -120,7 +43,7 @@ class StatsAnalysis {
         
         return `
             <div class="stats-container">
-                <h2>📊 パスワード統計情報</h2>
+                <h2>${I18n.t('stats.heading')}</h2>
                 
                 <div class="stats-grid">
                     ${this._generateBasicStatsCard()}
@@ -141,17 +64,17 @@ class StatsAnalysis {
     _generateBasicStatsCard() {
         return `
             <div class="stat-card">
-                <h3>基本統計</h3>
+                <h3>${I18n.t('stats.basicCard')}</h3>
                 <div class="stat-item">
-                    <span class="stat-label">総パスワード数:</span>
+                    <span class="stat-label">${I18n.t('stats.totalLabel')}</span>
                     <span class="stat-value">${this.stats.totalPasswords.toLocaleString()}</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">ユニークパスワード数:</span>
+                    <span class="stat-label">${I18n.t('stats.uniqueLabel')}</span>
                     <span class="stat-value">${this.stats.uniquePasswords.toLocaleString()}</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">重複率:</span>
+                    <span class="stat-label">${I18n.t('stats.duplicateLabel')}</span>
                     <span class="stat-value">${this.stats.duplicateRate}%</span>
                 </div>
             </div>
@@ -162,18 +85,20 @@ class StatsAnalysis {
     _generateLengthStatsCard() {
         return `
             <div class="stat-card">
-                <h3>長さ統計</h3>
+                <h3>${I18n.t('stats.lengthCard')}</h3>
                 <div class="stat-item">
-                    <span class="stat-label">平均長:</span>
+                    <span class="stat-label">${I18n.t('stats.avgLabel')}</span>
                     <span class="stat-value">${this.stats.avgLength}</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">最短:</span>
-                    <span class="stat-value">${this.stats.minLength} 文字</span>
+                    <span class="stat-label">${I18n.t('stats.minLabel')}</span>
+                    <span class="stat-value">${I18n.t('stats.chars',
+                        { length: this.stats.minLength })}</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">最長:</span>
-                    <span class="stat-value">${this.stats.maxLength} 文字</span>
+                    <span class="stat-label">${I18n.t('stats.maxLabel')}</span>
+                    <span class="stat-value">${I18n.t('stats.chars',
+                        { length: this.stats.maxLength })}</span>
                 </div>
             </div>
         `;
@@ -183,21 +108,21 @@ class StatsAnalysis {
     _generateCharTypeCard() {
         return `
             <div class="stat-card">
-                <h3>文字種別</h3>
+                <h3>${I18n.t('stats.charTypeCard')}</h3>
                 <div class="stat-item">
-                    <span class="stat-label">数字のみ:</span>
+                    <span class="stat-label">${I18n.t('stats.numericOnly')}</span>
                     <span class="stat-value">${this.stats.numericOnly}%</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">英字のみ:</span>
+                    <span class="stat-label">${I18n.t('stats.alphaOnly')}</span>
                     <span class="stat-value">${this.stats.alphaOnly}%</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">英数字混在:</span>
+                    <span class="stat-label">${I18n.t('stats.alphaNumeric')}</span>
                     <span class="stat-value">${this.stats.alphaNumeric}%</span>
                 </div>
                 <div class="stat-item">
-                    <span class="stat-label">特殊文字含む:</span>
+                    <span class="stat-label">${I18n.t('stats.withSpecial')}</span>
                     <span class="stat-value">${this.stats.withSpecial}%</span>
                 </div>
             </div>
@@ -208,22 +133,22 @@ class StatsAnalysis {
     _generateTop10Section() {
         return `
             <div class="stats-section">
-                <h3>🏆 Top 10 パスワード</h3>
+                <h3>${I18n.t('stats.top10Heading')}</h3>
                 <div class="top-passwords">
-                    <table>
+                    <table aria-label="${I18n.t('stats.top10Aria')}">
                         <thead>
                             <tr>
-                                <th>順位</th>
-                                <th>パスワード</th>
-                                <th>出現回数</th>
-                                <th>割合</th>
+                                <th scope="col">${I18n.t('stats.colRank')}</th>
+                                <th scope="col">${I18n.t('stats.colPassword')}</th>
+                                <th scope="col">${I18n.t('stats.colCount')}</th>
+                                <th scope="col">${I18n.t('stats.colShare')}</th>
                             </tr>
                         </thead>
                         <tbody>
                             ${this.stats.top10.map((item, index) => `
                                 <tr>
                                     <td class="rank">${index + 1}</td>
-                                    <td class="password">${PassCloudUtils.escapeHtml(item.password)}</td>
+                                    <td class="password"></td>
                                     <td class="count">${item.count.toLocaleString()}</td>
                                     <td class="percentage">${item.percentage}%</td>
                                 </tr>
@@ -239,13 +164,14 @@ class StatsAnalysis {
     _generateLengthDistributionSection(isDarkMode) {
         return `
             <div class="stats-section">
-                <h3>📏 長さ別分布</h3>
+                <h3>${I18n.t('stats.distHeading')}</h3>
                 <div class="length-distribution">
                     ${this.stats.lengthDistribution.map(item => `
                         <div class="dist-row">
-                            <span class="dist-label">${item.length}文字:</span>
+                            <span class="dist-label">${I18n.t('stats.distLabel',
+                                { length: item.length })}</span>
                             <div class="dist-bar-container">
-                                <div class="dist-bar" style="width: ${item.percentage}%; background: ${PassCloudUtils.getBarColor(item.percentage, isDarkMode)}"></div>
+                                <div class="dist-bar"></div>
                             </div>
                             <span class="dist-value">${item.count} (${item.percentage}%)</span>
                         </div>
@@ -259,18 +185,18 @@ class StatsAnalysis {
     _generatePatternAnalysisSection() {
         return `
             <div class="stats-section">
-                <h3>🔍 パターン分析</h3>
+                <h3>${I18n.t('stats.patternHeading')}</h3>
                 <div class="pattern-analysis">
                     <div class="pattern-item">
-                        <span class="pattern-label">連続数字 (123, 111等):</span>
+                        <span class="pattern-label">${I18n.t('stats.patternSequential')}</span>
                         <span class="pattern-value">${this.stats.patterns.sequential}%</span>
                     </div>
                     <div class="pattern-item">
-                        <span class="pattern-label">キーボード配列 (qwerty等):</span>
+                        <span class="pattern-label">${I18n.t('stats.patternKeyboard')}</span>
                         <span class="pattern-value">${this.stats.patterns.keyboard}%</span>
                     </div>
                     <div class="pattern-item">
-                        <span class="pattern-label">年号含む (2023, 1990等):</span>
+                        <span class="pattern-label">${I18n.t('stats.patternYears')}</span>
                         <span class="pattern-value">${this.stats.patterns.years}%</span>
                     </div>
                 </div>

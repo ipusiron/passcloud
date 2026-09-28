@@ -1,170 +1,59 @@
 // 部分一致ワードクラウド分析モジュール
 class PartialAnalysis {
+    // こちらの minSize は10。出現1回の8pxが捨てられていたので、
+    // minSize より大きく、出現2回の約14pxより小さい位置に置く。
+    static MIN_FONT_SIZE = 12;
+
     constructor(wordList) {
         this.wordList = wordList;
         this.canvas = null;
         this.canvasSetup = null;
         this.partialData = [];
+        this.retryCount = 0;
+        this.retryTimer = null;
+        // ホバー中の語句と件数。訳文ではなく値を覚える。
+        this.hovered = null;
+        // 描画の監視を外すための後始末。
+        this.unwatch = null;
     }
 
-    // 部分一致ワードクラウドを描画
+    // キャンバスを保持し、メッセージだけを切り替える。
     draw() {
-        document.querySelectorAll('.viewPanel').forEach(p => p.style.display = 'none');
         const panel = document.getElementById('partialView');
-        panel.style.display = 'block';
-        
-        if (this.wordList.length === 0) {
-            panel.innerHTML = '<p style="text-align: center; margin-top: 50px;">データがありません。ファイルを選択して分析を実行してください。</p>';
-            return;
-        }
-        
-        // 部分一致分析を実行
-        this.partialData = this._analyzePartialMatches();
-        
-        if (this.partialData.length === 0) {
-            panel.innerHTML = this._getNoDataHTML();
-            return;
-        }
-        
-        // HTMLを生成
-        const html = this._generateHTML();
-        panel.innerHTML = html;
-        
-        // ワードクラウドを描画
-        setTimeout(() => {
-            this._drawPartialWordCloud();
-        }, 100);
+        PassCloudUtils.showNoData(panel, this.wordList.length === 0);
+        if (this.wordList.length === 0) return;
+
+        this.partialData = this._analyzePartialMatches()
+            .map(([phrase, count]) => [PassCloudUtils.visibleText(phrase), count]);
+        const noMatches = this.partialData.length === 0;
+        panel.querySelector('.no-matches').hidden = !noMatches;
+        panel.querySelector('#partialCloudCanvas-container').hidden = noMatches;
+        const total = this.partialData.reduce((sum, [, count]) => sum + count, 0);
+        panel.querySelector('.partial-info').textContent = I18n.t('partial.info',
+            { phrases: this.partialData.length, total: total.toLocaleString() });
+        if (!noMatches) this._drawPartialWordCloud();
     }
 
-    // 部分一致分析を実行
+    // 計算は純粋なロジックへ委譲する。
     _analyzePartialMatches() {
-        const extractedPhrases = {};
-        const stemUsage = {};
-        
-        // 各パスワードを処理
-        this.wordList.forEach(([password, count]) => {
-            const lowerPassword = password.toLowerCase();
-            const processedStems = new Set();
-            
-            // 各語幹でチェック
-            knownStems.forEach(stem => {
-                if (lowerPassword.includes(stem)) {
-                    stemUsage[stem] = (stemUsage[stem] || 0) + count;
-                    
-                    // すべての出現位置を検索
-                    let searchIndex = 0;
-                    while (searchIndex < lowerPassword.length) {
-                        const index = lowerPassword.indexOf(stem, searchIndex);
-                        if (index === -1) break;
-                        
-                        const key = `${stem}-${index}`;
-                        if (processedStems.has(key)) {
-                            searchIndex = index + 1;
-                            continue;
-                        }
-                        processedStems.add(key);
-                        
-                        // 前の部分（接頭語）
-                        if (index > 0) {
-                            const prefix = lowerPassword.substring(0, index);
-                            if (prefix.length > 0 && prefix.length <= 8 && PassCloudUtils.isValidPhrase(prefix)) {
-                                extractedPhrases[prefix] = (extractedPhrases[prefix] || 0) + count;
-                            }
-                        }
-                        
-                        // 後の部分（接尾語）
-                        const endIndex = index + stem.length;
-                        if (endIndex < lowerPassword.length) {
-                            const suffix = lowerPassword.substring(endIndex);
-                            if (suffix.length > 0 && suffix.length <= 8 && PassCloudUtils.isValidPhrase(suffix)) {
-                                extractedPhrases[suffix] = (extractedPhrases[suffix] || 0) + count;
-                            }
-                        }
-                        
-                        searchIndex = index + stem.length;
-                    }
-                }
-            });
-        });
-        
-        // 使用された語幹をログ出力
-        const usedStemsList = Object.entries(stemUsage)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10);
-        console.log('Most used stems:', usedStemsList);
-        
-        // 配列に変換してソート
-        const sortedPhrases = Object.entries(extractedPhrases)
-            .filter(([phrase, count]) => {
-                return phrase.length > 0 && 
-                       count > 1 && 
-                       !knownStems.includes(phrase) && 
-                       !PassCloudUtils.isSingleChar(phrase);
-            })
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 200);
-        
-        console.log('Partial match analysis:', {
-            totalExtracted: Object.keys(extractedPhrases).length,
-            filteredCount: sortedPhrases.length,
-            top10: sortedPhrases.slice(0, 10)
-        });
-        
-        return sortedPhrases;
-    }
-
-    // データなしのHTML
-    _getNoDataHTML() {
-        return `
-            <div class="partial-container">
-                <h2>🧩 部分一致ワードクラウド</h2>
-                <p style="text-align: center; margin-top: 50px; color: var(--text-secondary);">
-                    分析対象となる部分一致語句が見つかりませんでした。<br>
-                    パスワードリストに共通語幹（pass, admin, 123など）が含まれていない可能性があります。
-                </p>
-            </div>
-        `;
-    }
-
-    // HTMLを生成
-    _generateHTML() {
-        const totalOccurrences = this.partialData.reduce((sum, [_, count]) => sum + count, 0);
-        
-        return `
-            <div class="partial-container">
-                <h2>🧩 部分一致ワードクラウド</h2>
-                <p class="partial-description">
-                    共通語幹（pass, admin, 123など）と組み合わせて使われる語句を可視化します。<br>
-                    推測しやすいパスワードパターンの把握に役立ちます。
-                </p>
-                <div class="partial-info">
-                    <span>✅ 自動語幹検出：上位50語を使用</span>
-                    <span>｜</span>
-                    <span>抽出された語句数：${this.partialData.length}</span>
-                    <span>｜</span>
-                    <span>総出現回数：${totalOccurrences.toLocaleString()}</span>
-                </div>
-                <div id="partialCloudCanvas-container" style="width: 100%; height: 600px; position: relative;">
-                    <canvas id="partialCloudCanvas" style="width: 100%; height: 100%;"></canvas>
-                </div>
-            </div>
-        `;
+        return PassCloudPartial.analyzePartialMatches(this.wordList);
     }
 
     // 部分一致ワードクラウドを描画
     _drawPartialWordCloud() {
         this.canvas = document.getElementById('partialCloudCanvas');
-        if (!this.canvas) {
-            console.error('Partial cloud canvas not found!');
-            return;
-        }
         
         this.canvasSetup = PassCloudUtils.setupCanvas(this.canvas);
         if (!this.canvasSetup) {
-            setTimeout(() => this._drawPartialWordCloud(), 100);
+            if (this.retryCount++ < 10) {
+                this.retryTimer = setTimeout(() => this._drawPartialWordCloud(), 100);
+            } else {
+                PassCloudUtils.notify('status.partialAreaFailed');
+            }
             return;
         }
 
+        this.retryCount = 0;
         const { ctx, rect } = this.canvasSetup;
         
         try {
@@ -174,13 +63,14 @@ class PartialAnalysis {
             // 背景を描画
             this._drawBackground(ctx, rect, isDarkMode);
             
+            // 何語句描けたかを数える。描く前に仕掛ける。
+            this._watchDrawing(this.partialData.length);
+            
             // WordCloudを描画
             WordCloud(this.canvas, options);
-            
-            console.log('Partial WordCloud drawn successfully with', this.partialData.length, 'phrases');
         } catch (error) {
-            console.error('Partial WordCloud error:', error);
-            this._drawError(ctx, rect, error.message);
+            PassCloudUtils.notify('status.partialDrawFailed');
+            this._drawError(ctx, rect, I18n.t('cloud.drawFailed'));
         }
     }
 
@@ -199,41 +89,43 @@ class PartialAnalysis {
             ]
         };
         
+        const counts = new Map(this.partialData);
+        const tally = this.partialData.map(([, count]) => count);
+        const minCount = Math.min(...tally);
+        const maxCount = Math.max(...tally);
+        const rect = this.canvasSetup?.rect ?? { width: 0, height: 0 };
+        // shape: 'diamond' は置ける範囲が長方形のおよそ半分なので、
+        // 面積の予算もその割合まで落とす。
+        const fontSize = PassCloudUtils.cloudFontSizer(this.partialData, rect.width, rect.height,
+            PartialAnalysis.MIN_FONT_SIZE, PassCloudUtils.CLOUD_AREA_FILL / 2);
         return {
-            list: this.partialData,
-            gridSize: 6,
-            weightFactor: function(size) {
-                return Math.pow(size, 0.8) * 8;
-            },
+            list: this.partialData.map(([word, count]) => [word, count]),
+            gridSize: PassCloudUtils.CLOUD_GRID,
+            weightFactor: fontSize,
             fontFamily: '"Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif',
             fontWeight: 'bold',
-            color: function(word, weight, fontSize) {
+            // 色はもとの出現回数から引く。サイズと同じ対数の目盛りを使う。
+            color: function(word) {
                 const colors = isDarkMode ? colorSchemes.dark : colorSchemes.light;
-                const index = Math.floor((1 - fontSize / 60) * colors.length);
+                const share = PassCloudUtils.countRatio(counts.get(word) ?? minCount,
+                    minCount, maxCount);
+                const index = PassCloudText.colorIndex(share, 1, colors.length);
                 return colors[Math.min(Math.max(index, 0), colors.length - 1)];
             },
             rotateRatio: 0.35,
             rotationSteps: 3,
             backgroundColor: isDarkMode ? '#1a1a1a' : '#fafafa',
             drawOutOfBound: false,
-            shrinkToFit: true,
+            // 本体のクラウドと同じ理由で切る（shrinkToFit は順位を壊す）。
+            shrinkToFit: false,
             minSize: 10,
             ellipticity: 0.7,
             shuffle: true,
             shape: 'diamond',
             hover: (item, dimension, event) => {
-                if (item) {
-                    this.canvas.style.cursor = 'pointer';
-                    this.canvas.title = `"${item[0]}": ${item[1]}回出現`;
-                } else {
-                    this.canvas.style.cursor = 'default';
-                    this.canvas.title = '';
-                }
-            },
-            click: (item, dimension, event) => {
-                if (item) {
-                    console.log('Partial phrase clicked:', item[0], 'Count:', item[1]);
-                }
+                this.hovered = item ? { word: item[0], count: counts.get(item[0]) } : null;
+                this.canvas.style.cursor = item ? 'pointer' : 'default';
+                this.renderHoverTitle();
             }
         };
     }
@@ -270,12 +162,45 @@ class PartialAnalysis {
         ctx.fillStyle = '#ff0000';
         ctx.font = '20px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('エラー: ' + errorMessage, rect.width / 2, rect.height / 2);
+        ctx.fillText(I18n.t('cloud.errorPrefix', { message: errorMessage }),
+            rect.width / 2, rect.height / 2);
     }
 
     // データ更新
     updateData(wordList) {
         this.wordList = wordList;
+    }
+
+    // wordcloud2 は語句ごとに wordclouddrawn を送る。描けた数を数え、
+    // 1語句も描けなかったときと欠けたときに理由を出す。
+    _watchDrawing(total) {
+        this._stopWatching();
+        const canvas = this.canvas;
+        let drawn = 0;
+        const onDrawn = event => { if (event.detail.drawn) drawn += 1; };
+        const onStop = () => {
+            this._stopWatching();
+            if (drawn === 0) PassCloudUtils.notify('status.partialNothingDrawn');
+            else if (drawn < total) PassCloudUtils.notify('status.partialPartlyDrawn', { drawn, total });
+        };
+        this.unwatch = () => {
+            canvas.removeEventListener('wordclouddrawn', onDrawn);
+            canvas.removeEventListener('wordcloudstop', onStop);
+            this.unwatch = null;
+        };
+        canvas.addEventListener('wordclouddrawn', onDrawn);
+        canvas.addEventListener('wordcloudstop', onStop);
+    }
+
+    _stopWatching() {
+        if (this.unwatch) this.unwatch();
+    }
+
+    // canvasの title は再描画で差し替わらないので、
+    // 言語を切り替えたらここから組み直す。
+    renderHoverTitle() {
+        if (!this.canvas) return;
+        this.canvas.title = this.hovered ? I18n.t('partial.hover', this.hovered) : '';
     }
 
     // 再描画
@@ -287,6 +212,10 @@ class PartialAnalysis {
 
     // クリーンアップ
     cleanup() {
+        clearTimeout(this.retryTimer);
+        this._stopWatching();
+        this.retryCount = 0;
+        this.hovered = null;
         if (this.canvas) {
             this.canvas.style.cursor = 'default';
             this.canvas.title = '';

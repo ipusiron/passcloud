@@ -4,166 +4,74 @@ class HeatmapAnalysis {
         this.wordList = wordList;
         this.originalLineCount = originalLineCount;
         this.heatmapData = null;
+        // 表示中のツールチップ。訳文ではなく種別と値を覚える。
+        this.tooltipState = null;
     }
 
     // ヒートマップを描画
     draw() {
-        document.querySelectorAll('.viewPanel').forEach(p => p.style.display = 'none');
         const panel = document.getElementById('heatmapView');
-        panel.style.display = 'block';
+        PassCloudUtils.showNoData(panel, this.wordList.length === 0);
         
         if (this.wordList.length === 0) {
-            panel.innerHTML = '<p style="text-align: center; margin-top: 50px;">データがありません。ファイルを選択して分析を実行してください。</p>';
             return;
         }
+        
+        // セルは作り直されるので、いまフォーカスがどこにあったかを先に控える。
+        const focused = this._focusedTarget();
         
         // ヒートマップデータを計算
         this.heatmapData = this._calculateHeatmapData();
         
-        // デバッグ情報
-        console.log('Heatmap Data:', {
-            totalPasswords: this.heatmapData.totalPasswords,
-            uniquePasswords: this.heatmapData.uniquePasswords,
-            maxCount: this.heatmapData.maxCount,
-            lengths: this.heatmapData.lengths,
-            minLength: this.heatmapData.minLength,
-            maxLength: this.heatmapData.maxLength,
-            mostCommonLength: this.heatmapData.mostCommonLength,
-            mostCommonLengthCount: this.heatmapData.mostCommonLengthCount,
-            matrix: this.heatmapData.matrix
-        });
-        
         // HTMLを生成
         const html = this._generateHTML();
-        panel.innerHTML = html;
+        const content = panel.querySelector('.view-content');
+        content.innerHTML = html;
+        const dark = PassCloudUtils.isDarkMode();
+        content.querySelectorAll('.heatmap-cell').forEach(cell => {
+            cell.style.backgroundColor = this._getHeatmapColor(Number(cell.dataset.count), this.heatmapData.maxCount, dark);
+        });
+        const gradient = content.querySelector('.legend-gradient');
+        if (gradient) gradient.style.background = this._getLegendGradient(dark);
         
         // ツールチップのイベントリスナーを追加
-        setTimeout(() => {
-            this._addHeatmapTooltips();
-        }, 100);
+        this._addHeatmapTooltips();
+        this._restoreFocus(focused);
     }
 
-    // ヒートマップデータを計算
-    _calculateHeatmapData() {
-        const lengthFreqMap = {};
-        let minLength = Infinity;
-        let maxLength = 0;
-        let maxFreq = 0;
-        let totalPasswordCount = this.originalLineCount;
-        
-        // データを収集
-        this.wordList.forEach(([password, count]) => {
-            const len = password.length;
-            minLength = Math.min(minLength, len);
-            maxLength = Math.max(maxLength, len);
-            maxFreq = Math.max(maxFreq, count);
-            
-            if (!lengthFreqMap[len]) {
-                lengthFreqMap[len] = {};
-            }
-            
-            const freqBand = this._getFrequencyBand(count);
-            if (!lengthFreqMap[len][freqBand]) {
-                lengthFreqMap[len][freqBand] = 0;
-            }
-            lengthFreqMap[len][freqBand]++;
-        });
-        
-        // 頻度帯の定義
-        const frequencyRanges = [
-            { min: 1, max: 1, label: '1' },
-            { min: 2, max: 3, label: '2-3' },
-            { min: 4, max: 5, label: '4-5' },
-            { min: 6, max: 10, label: '6-10' },
-            { min: 11, max: 20, label: '11-20' },
-            { min: 21, max: 50, label: '21-50' },
-            { min: 51, max: 100, label: '51-100' },
-            { min: 101, max: Infinity, label: '100+' }
-        ];
-        
-        // 表示する長さの範囲を作成
-        const displayMinLength = minLength;
-        const displayMaxLength = Math.min(20, maxLength);
-        const lengths = [];
-        for (let i = displayMinLength; i <= displayMaxLength; i++) {
-            lengths.push(i);
+    // 言語やテーマを切り替えると draw() がセルを作り直す。作り直されたセルは
+    // 別の要素なので、ブラウザーはフォーカスを body へ落とし、blur が飛んで
+    // 表示中のツールチップも閉じる。文言だけが訳し直されても、キーボードで
+    // 読んでいる利用者はその場で居場所を失う。
+    // そこで、どのセルを見ていたかを長さと頻度帯で覚え、同じセルへ置き直す。
+    // 頻度帯のラベルは '1' や '2-3' で言語によらないので、切り替えをまたいでも同じ値になる。
+    _focusedTarget() {
+        const active = document.activeElement;
+        if (!active || !active.classList) return null;
+        if (active.classList.contains('heatmap-cell')) {
+            return { kind: 'cell', length: active.dataset.length, freq: active.dataset.freq };
         }
-        
-        // 2次元マトリクスを作成
-        const matrix = [];
-        let maxCellCount = 0;
-        let mostCommonLength = 0;
-        let mostCommonLengthCount = 0;
-        let freqRangeCounts = {};
-        
-        lengths.forEach(len => {
-            const row = [];
-            let lengthTotal = 0;
-            
-            frequencyRanges.forEach(range => {
-                const key = `${range.min}-${range.max}`;
-                const count = (lengthFreqMap[len] && lengthFreqMap[len][key]) || 0;
-                row.push(count);
-                maxCellCount = Math.max(maxCellCount, count);
-                lengthTotal += count;
-                
-                if (!freqRangeCounts[range.label]) {
-                    freqRangeCounts[range.label] = 0;
-                }
-                freqRangeCounts[range.label] += count;
-            });
-            
-            if (lengthTotal > mostCommonLengthCount) {
-                mostCommonLengthCount = lengthTotal;
-                mostCommonLength = len;
-            }
-            
-            matrix.push(row);
-        });
-        
-        // 最頻出の頻度帯を特定
-        let mostCommonFreqRange = '';
-        let maxFreqRangeCount = 0;
-        Object.entries(freqRangeCounts).forEach(([range, count]) => {
-            if (count > maxFreqRangeCount) {
-                maxFreqRangeCount = count;
-                mostCommonFreqRange = range;
-            }
-        });
-        
-        // 実際のパスワード総数を計算
-        let actualMostCommonLengthCount = 0;
-        this.wordList.forEach(([password, count]) => {
-            if (password.length === mostCommonLength) {
-                actualMostCommonLengthCount += Math.floor(count);
-            }
-        });
-        
-        return {
-            lengths,
-            frequencyRanges,
-            matrix,
-            maxCount: maxCellCount,
-            minLength: displayMinLength,
-            maxLength: displayMaxLength,
-            mostCommonLength,
-            mostCommonLengthCount: actualMostCommonLengthCount,
-            mostCommonFreqRange,
-            totalPasswords: totalPasswordCount,
-            uniquePasswords: this.wordList.length
-        };
+        if (active.classList.contains('heatmap-main')) return { kind: 'main' };
+        return null;
     }
 
-    // 頻度帯を決定
-    _getFrequencyBand(count) {
-        if (count === 1) return '1-1';
-        if (count <= 3) return '2-3';
-        if (count <= 5) return '4-5';
-        if (count <= 10) return '6-10';
-        if (count <= 20) return '11-20';
-        if (count <= 50) return '21-50';
-        if (count <= 100) return '51-100';
-        return '101-Infinity';
+    _restoreFocus(target) {
+        if (!target) return;
+        if (target.kind === 'main') {
+            document.querySelector('.heatmap-main')?.focus();
+            return;
+        }
+        for (const cell of document.querySelectorAll('.heatmap-cell')) {
+            if (cell.dataset.length !== target.length || cell.dataset.freq !== target.freq) continue;
+            // focus を投げ直すと、セルの focus ハンドラーが同じ値でツールチップを開き直す。
+            cell.focus();
+            return;
+        }
+    }
+
+    // 集計はDOM非依存のモジュールで行う。
+    _calculateHeatmapData() {
+        return PassCloudHeatmap.calculateHeatmapData(this.wordList, this.originalLineCount);
     }
 
     // HTMLを生成
@@ -172,15 +80,16 @@ class HeatmapAnalysis {
         
         return `
             <div class="heatmap-container">
-                <h2>🔥 長さ×頻度ヒートマップ</h2>
+                <h2>${I18n.t('heatmap.heading')}</h2>
                 <p class="heatmap-description">
-                    パスワードの長さと出現頻度の関係を可視化します。<br>
-                    色が濃いほど、その長さ・頻度の組み合わせに該当するユニークなパスワードが多いことを示します。
+                    ${I18n.t('heatmap.desc1')}<br>
+                    ${I18n.t('heatmap.desc2')}
                 </p>
                 
                 <div class="heatmap-wrapper">
-                    ${this._generateYAxis()}
-                    ${this._generateMainContent(isDarkMode)}
+                    ${this.heatmapData.lengths.length
+                        ? this._generateMainContent(isDarkMode)
+                        : `<p>${I18n.t('heatmap.empty')}</p>`}
                     ${this._generateLegend(isDarkMode)}
                 </div>
                 ${this._generateSummary()}
@@ -188,38 +97,17 @@ class HeatmapAnalysis {
         `;
     }
 
-    // Y軸を生成
-    _generateYAxis() {
-        // ヒートマップと同じ順序（大きい値から小さい値へ）で表示
-        const reversedLengths = [...this.heatmapData.lengths].reverse();
-        return `
-            <div class="heatmap-y-axis">
-                <div class="y-axis-label">パスワードの長さ（文字数）</div>
-                <div class="y-axis-values-wrapper">
-                    <div class="y-axis-values">
-                        ${reversedLengths.map((len, index) => 
-                            `<div class="y-value">${len}</div>`
-                        ).join('')}
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
     // メインコンテンツを生成
     _generateMainContent(isDarkMode) {
         return `
-            <div class="heatmap-main">
-                <div class="heatmap-grid">
-                    ${this._generateHeatmapGrid(isDarkMode)}
-                </div>
-                
-                <div class="heatmap-x-axis">
-                    <div class="x-axis-values">
-                        ${this.heatmapData.frequencyRanges.map(range => `<div class="x-value">${range.label}</div>`).join('')}
-                    </div>
-                    <div class="x-axis-label">出現頻度</div>
-                </div>
+            <div class="heatmap-main" tabindex="0" aria-label="${I18n.t('heatmap.mainAria')}">
+                <table class="heatmap-grid" aria-label="${I18n.t('heatmap.gridAria')}">
+                    <thead><tr>
+                        <th scope="col">${I18n.t('heatmap.colLength')}</th>
+                        ${this.heatmapData.frequencyRanges.map(range => `<th scope="col">${range.label}</th>`).join('')}
+                    </tr></thead>
+                    <tbody>${this._generateHeatmapGrid(isDarkMode)}</tbody>
+                </table>
             </div>
         `;
     }
@@ -228,10 +116,10 @@ class HeatmapAnalysis {
     _generateLegend(isDarkMode) {
         return `
             <div class="heatmap-legend">
-                <div class="legend-title">ユニーク<br>パスワード数</div>
+                <div class="legend-title">${I18n.t('heatmap.legendTitle1')}<br>${I18n.t('heatmap.legendTitle2')}</div>
                 <div class="legend-scale">
                     <div class="legend-max">${this.heatmapData.maxCount}</div>
-                    <div class="legend-gradient" style="background: ${this._getLegendGradient(isDarkMode)}"></div>
+                    <div class="legend-gradient"></div>
                     <div class="legend-min">0</div>
                 </div>
             </div>
@@ -243,26 +131,33 @@ class HeatmapAnalysis {
         return `
             <div class="heatmap-summary-wrapper">
                 <div class="heatmap-stat-card">
-                    <h4>📊 分析サマリー</h4>
+                    ${this.heatmapData.excludedUnique > 0
+                        ? `<p>${I18n.t('heatmap.excluded', { unique: this.heatmapData.excludedUnique,
+                            occurrences: this.heatmapData.excludedOccurrences })}</p>`
+                        : ''}
+                    <h3>${I18n.t('heatmap.summaryHeading')}</h3>
                     <div class="heatmap-stat-item">
-                        <span>総パスワード数:</span>
+                        <span>${I18n.t('heatmap.totalLabel')}</span>
                         <span>${this.heatmapData.totalPasswords.toLocaleString()}</span>
                     </div>
                     <div class="heatmap-stat-item">
-                        <span>ユニークパスワード数:</span>
+                        <span>${I18n.t('heatmap.uniqueLabel')}</span>
                         <span>${this.heatmapData.uniquePasswords.toLocaleString()}</span>
                     </div>
                     <div class="heatmap-stat-item">
-                        <span>最も多い長さ:</span>
-                        <span>${this.heatmapData.mostCommonLength}文字 (${this.heatmapData.mostCommonLengthCount.toLocaleString()}個)</span>
+                        <span>${I18n.t('heatmap.commonLengthLabel')}</span>
+                        <span>${I18n.t('heatmap.commonLengthValue',
+                            { length: this.heatmapData.mostCommonLength,
+                                count: this.heatmapData.mostCommonLengthCount.toLocaleString() })}</span>
                     </div>
                     <div class="heatmap-stat-item">
-                        <span>最頻出の頻度帯:</span>
+                        <span>${I18n.t('heatmap.commonBandLabel')}</span>
                         <span>${this.heatmapData.mostCommonFreqRange}</span>
                     </div>
                     <div class="heatmap-stat-item">
-                        <span>分析対象範囲:</span>
-                        <span>${this.heatmapData.minLength}〜${this.heatmapData.maxLength}文字</span>
+                        <span>${I18n.t('heatmap.rangeLabel')}</span>
+                        <span>${I18n.t('heatmap.rangeValue', { min: this.heatmapData.minLength,
+                            max: this.heatmapData.maxLength })}</span>
                     </div>
                 </div>
             </div>
@@ -286,22 +181,23 @@ class HeatmapAnalysis {
         const reversedLengths = [...this.heatmapData.lengths].reverse();
         
         reversedMatrix.forEach((row, i) => {
-            html += '<div class="heatmap-row">';
+            html += `<tr><th scope="row">${I18n.t('heatmap.rowLength',
+                { length: reversedLengths[i] })}</th>`;
             row.forEach((count, j) => {
-                const color = this._getHeatmapColor(count, this.heatmapData.maxCount, isDarkMode);
                 const percentage = totalCells > 0 ? ((count / totalCells) * 100).toFixed(2) : 0;
-                const opacity = count === 0 ? '0.3' : '1';
                 html += `
-                    <div class="heatmap-cell" 
-                         style="background-color: ${color}; opacity: ${opacity};"
+                    <td class="heatmap-cell" tabindex="0"
+                         aria-label="${I18n.t('heatmap.cellAria', { length: reversedLengths[i],
+                             freq: this.heatmapData.frequencyRanges[j].label, count })}"
                          data-length="${reversedLengths[i]}"
                          data-freq="${this.heatmapData.frequencyRanges[j].label}"
                          data-count="${count}"
                          data-percentage="${percentage}">
-                    </div>
+                        <span class="heatmap-count">${count}</span>
+                    </td>
                 `;
             });
-            html += '</div>';
+            html += '</tr>';
         });
         
         return html;
@@ -376,7 +272,7 @@ class HeatmapAnalysis {
     // ヒートマップのツールチップを追加
     _addHeatmapTooltips() {
         const cells = document.querySelectorAll('.heatmap-cell');
-        const tooltip = document.createElement('div');
+        const tooltip = document.querySelector('.heatmap-tooltip') || document.createElement('div');
         tooltip.className = 'heatmap-tooltip';
         document.body.appendChild(tooltip);
         
@@ -387,17 +283,21 @@ class HeatmapAnalysis {
                 const count = e.target.dataset.count;
                 const percentage = e.target.dataset.percentage;
                 
-                if (count > 0) {
-                    tooltip.innerHTML = `
-                        <strong>${length}文字のパスワード</strong><br>
-                        出現頻度: ${freq}回<br>
-                        該当数: ${count}種類<br>
-                        全体に占める割合: ${percentage}%
-                    `;
+                if (Number(count) > 0) {
+                    this._rememberTooltip('hover', { length, freq, count, percentage });
                     tooltip.style.display = 'block';
                 }
             });
             
+            cell.addEventListener('focus', () => {
+                this._rememberTooltip('cell', { length: cell.dataset.length,
+                    freq: cell.dataset.freq, count: cell.dataset.count });
+                tooltip.style.display = 'block';
+                const rect = cell.getBoundingClientRect();
+                tooltip.style.left = Math.max(0, rect.left) + 'px';
+                tooltip.style.top = (rect.bottom + window.scrollY + 5) + 'px';
+            });
+            cell.addEventListener('blur', () => { tooltip.style.display = 'none'; });
             cell.addEventListener('mousemove', (e) => {
                 const tooltipRect = tooltip.getBoundingClientRect();
                 const windowWidth = window.innerWidth;
@@ -425,6 +325,23 @@ class HeatmapAnalysis {
         });
     }
 
+    // ツールチップは body 直下にあり、セルを作り直しても
+    // 差し替わらない。訳文ではなく種別と値を覚えておき、
+    // 言語を切り替えたら renderTooltip() が訳し直す。
+    _rememberTooltip(kind, values) {
+        this.tooltipState = { kind, values };
+        this.renderTooltip();
+    }
+
+    renderTooltip() {
+        const tooltip = document.querySelector('.heatmap-tooltip');
+        const state = this.tooltipState;
+        if (!tooltip || !state) return;
+        tooltip.textContent = state.kind === 'cell'
+            ? I18n.t('heatmap.cellAria', state.values)
+            : I18n.t('heatmap.tooltip', state.values);
+    }
+
     // データ更新
     updateData(wordList, originalLineCount) {
         this.wordList = wordList;
@@ -441,9 +358,6 @@ class HeatmapAnalysis {
 
     // クリーンアップ
     cleanup() {
-        const existingTooltip = document.querySelector('.heatmap-tooltip');
-        if (existingTooltip) {
-            existingTooltip.remove();
-        }
+        document.querySelectorAll('.heatmap-tooltip').forEach(tooltip => tooltip.remove());
     }
 }
