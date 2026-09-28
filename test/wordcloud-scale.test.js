@@ -127,6 +127,60 @@ function WordCloudMinimum() {
     return vm.runInContext('WordCloudAnalysis.MIN_FONT_SIZE', cloudContext());
 }
 
+// wordcloud2 は canvas.width / gridSize でマス目を数え、そのマス目にしか語を置かない。
+// マス目と canvas の実寸がずれた分だけ、語が canvas の外へ出て切り落とされる。
+function fakeCanvas(width, height) {
+    const calls = [];
+    const ctx = new Proxy({}, {
+        get: (target, name) => {
+            if (name in target) return target[name];
+            return (...args) => calls.push([String(name), ...args]);
+        },
+        set: (target, name, value) => { target[name] = value; return true; }
+    });
+    return {
+        calls,
+        getContext: () => ctx,
+        getBoundingClientRect: () => ({ width, height })
+    };
+}
+
+test('the canvas is sized so that the wordcloud2 grid lands exactly on it', () => {
+    const context = cloudContext();
+    context.window.devicePixelRatio = 2;
+    const Utils2 = vm.runInContext('PassCloudUtils', context);
+    const grid = Utils2.CLOUD_GRID;
+    assert.equal(grid, 6);
+    for (const [width, height] of [[1291, 600], [1296, 600], [360, 560], [1120, 595]]) {
+        const canvas = fakeCanvas(width, height);
+        const setup = Utils2.setupCanvas(canvas);
+        const label = width + 'x' + height;
+        // devicePixelRatio でバッキングストアを広げない。広げると描画の座標系は
+        // CSS ピクセルのままなのに、マス目だけが dpr 倍になる。
+        assert.equal(canvas.width, Math.floor(width / grid) * grid, label);
+        assert.equal(canvas.height, Math.floor(height / grid) * grid, label);
+        // 辺が gridSize の倍数でないと、最後のマスが辺をまたいで語が切れる。
+        assert.equal(canvas.width % grid, 0, label);
+        assert.equal(canvas.height % grid, 0, label);
+        assert.equal(setup.rect.width, canvas.width, label);
+        assert.equal(setup.rect.height, canvas.height, label);
+        assert.equal(setup.scale, 1, label);
+        assert.deepEqual(canvas.calls.filter(call => call[0] === 'scale'), [], label);
+    }
+    // 描画領域が gridSize に満たなければ、まだ描けない扱いにする。
+    assert.equal(Utils2.setupCanvas(fakeCanvas(4, 600)), null);
+    assert.equal(Utils2.setupCanvas(fakeCanvas(600, 0)), null);
+    assert.equal(Utils2.setupCanvas(null), null);
+});
+
+test('both clouds hand wordcloud2 the same grid the canvas was sized for', () => {
+    for (const name of ['wordcloud-analysis.js', 'partial-analysis.js']) {
+        const source = fs.readFileSync(path.join(root, 'js', name), 'utf8');
+        // 数値を直接書くと、setupCanvas の切り下げと静かにずれる。
+        assert.match(source, /gridSize: PassCloudUtils\.CLOUD_GRID,/, name);
+    }
+});
+
 test('the spread of the sizes follows how many decades the counts span', () => {
     // countRatio は最小出現を0・最頻出を1へ引き延ばす min-max 正規化なので、
     // それだけだと絶対的な目盛りがない。回数の幅が狭いほど差が誇張される。

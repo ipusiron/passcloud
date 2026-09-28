@@ -57,30 +57,59 @@ class PassCloudUtils {
         document.getElementById("loadingIndicator").hidden = true;
     }
 
+    // wordcloud2 に渡す gridSize。2つのクラウドと setupCanvas で同じ値を使う。
+    static CLOUD_GRID = 6;
+
     // Canvas設定関数
+    //
+    // wordcloud2 は canvas.width / gridSize でマス目を数え（ngx・ngy）、
+    // そのマス目の中だけに語を置く。マス目と canvas の実寸がずれると、
+    // ずれた分だけ語が canvas の外へ出て切り落とされる。
+    // ずれる原因が2つあった。
+    //
+    //   1. devicePixelRatio でバッキングストアを広げて ctx.scale する書き方。
+    //      描画の座標は CSS ピクセルのままなのに、マス目だけが dpr 倍に広がる。
+    //      実測（Chrome・1291×600・重複なし400語）:
+    //        dpr=1    インク20.4%、四辺とも欠けなし
+    //        dpr=1.25 インク16.9%、下辺で欠ける
+    //        dpr=1.5  インク13.5%、下辺と右辺で欠ける
+    //        dpr=2    インク 4.5%、下辺と右辺で欠ける
+    //   2. canvas の辺が gridSize の倍数でないと、最後のマスが辺をまたぐ。
+    //      実測（360×560。ngy = ceil(560/6) = 94 でマス目は564px）:
+    //      下端の4pxで語が切れていた。
+    //
+    // バッキングストアを CSS ピクセルのままにし、さらに gridSize の倍数へ
+    // 切り下げる。dpr が大きい画面では解像度を捨てることになるが、
+    // 語が欠けないことを優先する（切り下げで失うのは辺あたり最大5px）。
     static setupCanvas(canvas) {
         if (!canvas) {
             return null;
         }
-        
+
         const ctx = canvas.getContext('2d');
-        const rect = canvas.getBoundingClientRect();
-        
-        if (!ctx || rect.width === 0 || rect.height === 0) {
+        const box = canvas.getBoundingClientRect();
+
+        if (!ctx || box.width === 0 || box.height === 0) {
             return null;
         }
-        
-        const scale = window.devicePixelRatio || 1;
-        canvas.width = rect.width * scale;
-        canvas.height = rect.height * scale;
-        
-        ctx.scale(scale, scale);
+
+        const grid = PassCloudUtils.CLOUD_GRID;
+        const rect = {
+            width: Math.floor(box.width / grid) * grid,
+            height: Math.floor(box.height / grid) * grid
+        };
+        if (!(rect.width > 0 && rect.height > 0)) {
+            return null;
+        }
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+
         ctx.textBaseline = 'alphabetic';
         ctx.textAlign = 'left';
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
-        
-        return { ctx, rect, scale };
+
+        return { ctx, rect, scale: 1 };
     }
 
     // ---- ワードクラウドのフォントサイズ ----

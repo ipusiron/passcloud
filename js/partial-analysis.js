@@ -100,7 +100,7 @@ class PartialAnalysis {
             PartialAnalysis.MIN_FONT_SIZE, PassCloudUtils.CLOUD_AREA_FILL / 2);
         return {
             list: this.partialData.map(([word, count]) => [word, count]),
-            gridSize: 6,
+            gridSize: PassCloudUtils.CLOUD_GRID,
             weightFactor: fontSize,
             fontFamily: '"Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif',
             fontWeight: 'bold',
