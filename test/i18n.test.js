@@ -97,6 +97,37 @@ test('t() fills substitutions and throws on an unknown key', () => {
     assert.equal(I18n.language, 'ja');
 });
 
+test('the English counts stay readable when the number is 1', () => {
+    // 件数の差し込みが1でも壊れないように、複数形の仕組みは入れず、
+    // 単複に依存しないラベル形で書く（「1 times」「1 occurrences」
+    // 「1 of 5 words were drawn」はどれも英語として壊れている）。
+    const counted = {
+        'cloud.hover': { count: 1, word: 'ninja' },
+        'partial.hover': { count: 1, word: 'ninja' },
+        'status.cloudPartlyDrawn': { drawn: 1, total: 5 },
+        'status.partialPartlyDrawn': { drawn: 1, total: 5 }
+    };
+    for (const [key, values] of Object.entries(counted)) {
+        let filled = I18n.en[key];
+        for (const [name, value] of Object.entries(values)) {
+            filled = filled.split('{' + name + '}').join(String(value));
+        }
+        // 数のうしろに複数形の名詞を置かない。
+        assert.doesNotMatch(filled, /\b\d+ [a-z]+s\b/, key + ': ' + filled);
+        // 主語の数で形が変わる動詞・代名詞も置かない。
+        assert.doesNotMatch(filled, /\b(?:were|are|they|them)\b/, key + ': ' + filled);
+        // 差し込みは残さない。
+        assert.doesNotMatch(filled, /[{}]/, key + ': ' + filled);
+    }
+    // 和文は数で形が変わらないので、そのままでよい。
+    assert.equal(I18n.ja['cloud.hover'], '{word}: {count}回');
+    // 日英で差し込みはそろえる（上の表がずれたら気づけるように）。
+    for (const key of Object.keys(counted)) {
+        assert.deepEqual(placeholders(I18n.ja[key]), placeholders(I18n.en[key]), key);
+        assert.deepEqual(placeholders(I18n.en[key]), Object.keys(counted[key]).sort(), key);
+    }
+});
+
 test('no element that has children carries data-i18n', () => {
     for (const match of html.matchAll(/<(\w+)[^>]*\sdata-i18n="[^"]+"[^>]*>([\s\S]*?)<\/\1\s*>/g)) {
         assert.ok(!match[2].includes('<'), match[0].slice(0, 90));

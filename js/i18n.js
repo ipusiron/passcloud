@@ -262,19 +262,19 @@ const I18n = (() => {
             'No word fitted in the word cloud.'
             + ' Every word is too long for the drawing area, even at the smallest font size.',
         'status.cloudPartlyDrawn':
-            '{drawn} of {total} words were drawn. The ones that did not fit were left out.',
+            'Words drawn: {drawn} of {total}. Anything that did not fit was left out.',
         'status.partialAreaFailed': 'The drawing area for the partial-match word cloud could not be prepared.',
         'status.partialDrawFailed': 'The partial-match word cloud could not be drawn.',
         'status.partialNothingDrawn':
             'No phrase fitted in the partial-match word cloud.'
             + ' Every phrase is too long for the drawing area, even at the smallest font size.',
         'status.partialPartlyDrawn':
-            '{drawn} of {total} phrases were drawn. The ones that did not fit were left out.',
+            'Phrases drawn: {drawn} of {total}. Anything that did not fit was left out.',
 
         'view.noData': 'No data yet. Choose a file and run the analysis.',
 
         'cloud.canvasAria': 'Word cloud of the passwords',
-        'cloud.hover': '{word}: {count} times',
+        'cloud.hover': '{word} (count: {count})',
         'cloud.drawFailed': 'Could not be drawn',
         'cloud.errorPrefix': 'Error: {message}',
 
@@ -283,7 +283,7 @@ const I18n = (() => {
         'partial.noMatches': 'No partial-match phrase was found to analyze.',
         'partial.canvasAria': 'Word cloud of the partial-match phrases',
         'partial.info': 'Fixed list of 61 stems | Extracted phrases: {phrases} | Total occurrences: {total}',
-        'partial.hover': '"{word}": {count} occurrences',
+        'partial.hover': '"{word}" (count: {count})',
 
         'stats.heading': '📊 Password statistics',
         'stats.basicCard': 'Basic',
