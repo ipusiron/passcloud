@@ -156,6 +156,23 @@ class PassCloudUtils {
         return Math.min(1, Math.max(0, ratio));
     }
 
+    // 出現回数の幅が何桁ひらいていれば、サイズを下限いっぱいまで広げてよいか。
+    // countRatio は最小出現を0・最頻出を1へ引き延ばす min-max 正規化なので、
+    // 絶対的な目盛りがない。出現回数の幅が狭いほど、わずかな差が極端に開く。
+    // 実測（1,000／1,010／1,020／1,030／1,040回。幅はわずか4%）では、
+    // 1,000回が8.00px、1,040回が140pxで、4%の差が17.5倍の見た目になっていた。
+    static SPREAD_DECADE = 1;
+
+    // 出現回数の幅の広がり（0～1）。1桁（10倍）以上ひらいていれば1、
+    // そこから下は桁数に比例して0へ落ちる。
+    // サイズの下端をどこまで下げるかに使い、比の小さい入力では
+    // 全語が上端の近くに寄る（順位は保ったまま、差だけが控えめになる）。
+    static countSpread(minCount, maxCount) {
+        if (!(maxCount > minCount)) return 0;
+        const decades = Math.log10(Number(maxCount) / Number(minCount));
+        return Math.min(1, decades / PassCloudUtils.SPREAD_DECADE);
+    }
+
     // 全語のインクの面積の合計を、描画領域の面積の何割まで許すか。
     // 語は矩形ではなく、wordcloud2 の配置は中心から外へ置いていく貪欲法なので、
     // 合計が領域と同じでも入りきらない。
@@ -171,7 +188,13 @@ class PassCloudUtils {
     // ねらいは「出現回数が多い語は必ず同じか大きく描かれる」こと（サイズの単調性）。
     // そのために、サイズを決めるのは出現回数だけにし、語ごとの都合では動かさない。
     //
-    //   size(count) = floor + countRatio(count) × (top − floor)
+    //   size(count) = floor + countShare(count) × (top − floor)
+    //   countShare(count) = 1 − (1 − countRatio(count)) × countSpread(min, max)
+    //
+    // countSpread は出現回数の幅が1桁以上あれば1で、そのとき
+    // countShare は countRatio そのもの（最小出現が floor、最頻出が top）になる。
+    // 幅が1桁に満たない入力では countShare が上端へ寄り、
+    // わずかな回数差が極端なサイズ差に化けるのを抑える。
     //
     // top は、次の3つを同時に満たす最大値を二分探索で決める。
     //   - 全語のインクの面積の合計が、描画領域の面積 × CLOUD_AREA_FILL に収まる
@@ -194,8 +217,10 @@ class PassCloudUtils {
         if (!(maxCount >= minCount)) maxCount = minCount;
 
         const safe = PassCloudUtils.maxFontSize(longest, areaHeight);
-        const shares = words.map(([length, count]) =>
-            [length, PassCloudUtils.countRatio(count, minCount, maxCount)]);
+        const spread = PassCloudUtils.countSpread(minCount, maxCount);
+        const share = count =>
+            1 - (1 - PassCloudUtils.countRatio(count, minCount, maxCount)) * spread;
+        const shares = words.map(([length, count]) => [length, share(count)]);
         const area = Number(areaWidth) * Number(areaHeight);
         const budget = area > 0 ? area * budgetFill : Infinity;
         const fits = top => {
@@ -226,8 +251,7 @@ class PassCloudUtils {
             // 最小出現を下回る値は、shrinkToFit を戻したときの保険。
             // 下限より下へ落として、putWord の呼び直しが必ず終わるようにする。
             if (!(value >= minCount)) return floor * Math.max(0, value) / minCount;
-            return Math.min(safe,
-                floor + PassCloudUtils.countRatio(value, minCount, maxCount) * (top - floor));
+            return Math.min(safe, floor + share(value) * (top - floor));
         };
     }
 

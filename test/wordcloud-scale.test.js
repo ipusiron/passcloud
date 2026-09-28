@@ -127,6 +127,64 @@ function WordCloudMinimum() {
     return vm.runInContext('WordCloudAnalysis.MIN_FONT_SIZE', cloudContext());
 }
 
+test('the spread of the sizes follows how many decades the counts span', () => {
+    // countRatio は最小出現を0・最頻出を1へ引き延ばす min-max 正規化なので、
+    // それだけだと絶対的な目盛りがない。回数の幅が狭いほど差が誇張される。
+    assert.equal(Utils.countSpread(1, 1), 0);
+    assert.equal(Utils.countSpread(1, 10), 1);
+    assert.equal(Utils.countSpread(1, 20000), 1);
+    assert.equal(Utils.countSpread(1000, 10000), 1);
+    // 1桁に満たない幅は、桁数に比例して0へ落ちる。
+    assert.ok(Math.abs(Utils.countSpread(1, 100) - 1) < 1e-12);
+    assert.ok(Math.abs(Utils.countSpread(100, 1000) - 1) < 1e-12);
+    assert.ok(Math.abs(Utils.countSpread(1000, 1040) - Math.log10(1.04)) < 1e-12);
+    assert.ok(Utils.countSpread(1000, 1040) < 0.02);
+    // 幅が広がるほど単調に増える。
+    let last = -1;
+    for (const max of [1000, 1100, 1500, 2000, 5000, 9000, 10000, 40000]) {
+        const got = Utils.countSpread(1000, max);
+        assert.ok(got >= last, max + ': ' + got);
+        last = got;
+    }
+});
+
+test('counts that differ by a few percent do not differ by an order of magnitude in size', () => {
+    // 実測（直す前）: 出現1,000回が8.00px、1,040回が140px。
+    // 回数の幅は4%しかないのに、見た目は17.5倍ひらいていた。
+    const counts = [1000, 1010, 1020, 1030, 1040];
+    const list = counts.map((count, i) => ['word' + i, count]);
+    const { weightFactor } = cloudOptions(list);
+    const sizes = counts.map(count => weightFactor(count));
+    // 単調性は保つ。
+    for (let i = 1; i < sizes.length; i += 1) {
+        assert.ok(sizes[i] > sizes[i - 1], counts[i - 1] + '→' + counts[i]);
+    }
+    // 回数の比が1.04なので、サイズの比も1桁どころか1.5倍にも届かない。
+    assert.ok(Math.max(...sizes) / Math.min(...sizes) < 1.5,
+        'ratio: ' + (Math.max(...sizes) / Math.min(...sizes)));
+    // それでいて canvas は空白だらけにならない（下端ではなく上端へ寄せるため）。
+    let ink = 0;
+    for (const [word, count] of list) ink += Utils.wordInkArea(word.length, weightFactor(count));
+    const budget = AREA.width * AREA.height * Utils.CLOUD_AREA_FILL;
+    assert.ok(ink <= budget + 1e-6, String(ink));
+    assert.ok(ink > budget * 0.9, String(ink));
+});
+
+test('counts that span more than a decade keep the sizes they had', () => {
+    // 幅の広い入力の見え方は変えない。実測の値をそのまま置く。
+    const list = [['passwd', 20000], ['qwerty', 2000], ['letmei', 500],
+        ['dragon', 120], ['ninjas', 20], ['abcdef', 1]];
+    const { weightFactor } = cloudOptions(list);
+    const expected = [[20000, 116.67], [2000, 91.40], [500, 76.19],
+        [120, 60.53], [20, 40.87], [1, 8.00]];
+    for (const [count, size] of expected) {
+        assert.ok(Math.abs(weightFactor(count) - size) < 0.01,
+            count + ': ' + weightFactor(count) + ' != ' + size);
+    }
+    // 最頻出の語は、その語が描画領域に置ける上限まで届いている。
+    assert.ok(Math.abs(weightFactor(20000) - Utils.wordFitSize(6, AREA.width, AREA.height)) < 1e-9);
+});
+
 test('the sizes fit the drawing area and stay inside the area budget', () => {
     const sample = processText(fs.readFileSync(path.join(root, 'sample/passcloud_sample_1000.txt'), 'utf8'));
     const list = sample.wordList.map(([word, count]) => [word, count]);
