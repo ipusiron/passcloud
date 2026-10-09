@@ -256,6 +256,20 @@ For the bundled sample, 19 phrases were extracted, 343 occurrences in total.
 | 56789 | 19 |
 | 6789 | 19 |
 
+## 🎯 Use cases
+
+### Ways of using this tool in particular
+
+- Confirming reuse from the duplicate rate (statistics and password classes): counting the 1,005 passwords in the sample gives only 67 distinct ones, a duplicate rate of 93.3%. You can confirm, with a single number, that when many people reuse the same password, a few distinct passwords take up the whole, by the duplicate rate
+- Confirming that common passwords take the top (frequency-distribution classes): the top of the sample is ninja at 2.89%, pepper at 2.89% and batman at 2.79%, where a handful of words take a large share. You can confirm, by rank and share, why an attack that tries a few common passwords against many accounts (password spraying) works
+- Confirming the classification of password composition (data-classification classes): in the sample, digits only are 14.2%, letters only 71.4%, alphanumeric 13.9% and with a symbol 0.4%. It also counts patterns such as sequential (20.1%) and keyboard runs (6.2%). You can confirm classifying passwords by composition and pattern to see the trend of weakness
+
+### General uses
+
+- Analyze a leaked password list for trends of reuse and common words
+- Use the word cloud and statistics as material for password-strength awareness
+- Use the composition distribution to review your organization's password policy (do not put real passwords into the tool)
+
 ## 🔒 Security and privacy
 
 Everything runs inside the browser, and the input is never sent anywhere.

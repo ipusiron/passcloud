@@ -127,3 +127,18 @@ test('both README trees list every file and directory, with aligned explanations
         assert.doesNotMatch(fs.readFileSync(path.join(root, 'js', relative), 'utf8'), /console\.log/);
     }
 });
+
+test('ユースケースの「このツールならではの使い方」の数を計算部で再計算（日英）', () => {
+  const readmeEn = fs.readFileSync(path.join(root, 'README.en.md'), 'utf8');
+  const stats = calculateStatistics(sample.wordList, sample.originalLineCount);
+  assert.deepEqual([stats.totalPasswords, stats.uniquePasswords, stats.duplicateRate], [1005, 67, '93.3']);
+  assert.deepEqual(stats.top10.slice(0, 3).map((x) => [x.password, x.percentage]),
+    [['ninja', '2.89'], ['pepper', '2.89'], ['batman', '2.79']]);
+  assert.deepEqual([stats.numericOnly, stats.alphaOnly, stats.alphaNumeric, stats.withSpecial],
+    ['14.2', '71.4', '13.9', '0.4']);
+  assert.deepEqual([stats.patterns.sequential, stats.patterns.keyboard], ['20.1', '6.2']);
+  for (const md of [readme, readmeEn]) {
+    assert.ok(md.includes('1,005') && md.includes('67') && md.includes('93.3'));
+    assert.ok(md.includes('2.89') && md.includes('14.2') && md.includes('71.4'));
+  }
+});
