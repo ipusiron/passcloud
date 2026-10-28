@@ -456,6 +456,7 @@ passcloud/                             # アプリケーションのルート
 │   ├── main.js                        # 画面の組み立て・ファイル入力・タブ切り替え・テーマ
 │   ├── partial-analysis.js            # 部分一致ワードクラウドの描画
 │   ├── stats-analysis.js              # 統計情報の描画
+│   ├── theme-init.js                  # 最初の描画の前にテーマ（ライト／ダーク）を決める
 │   ├── utils.js                       # 画面まわりの共通処理（canvas 設定・配色・ローディング）
 │   ├── wordcloud-analysis.js          # ワードクラウドの描画
 │   └── wordcloud2.js                  # wordcloud2.js 本体（同梱。手を加えない）
@@ -472,6 +473,7 @@ passcloud/                             # アプリケーションのルート
 │   ├── readme.test.js                 # README の表と数値をコードで再計算して突き合わせる
 │   ├── stats.test.js                  # 統計の数値と Top10 の並びを検証する
 │   ├── text-processor.test.js         # 取り込みと語幹推定の境界値を検証する
+│   ├── theme-init.test.js             # テーマの初期判定と読み込み位置を検証する
 │   └── wordcloud-scale.test.js        # サイズの単調性と、描けなかったときの知らせを検証する
 ├── .gitignore                         # Git の除外設定
 ├── .nojekyll                          # GitHub Pages の Jekyll 処理を無効にする

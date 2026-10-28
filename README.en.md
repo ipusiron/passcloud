@@ -423,6 +423,7 @@ passcloud/                             # the root of the application
 │   ├── main.js                        # the screen, file input, tab switching and the theme
 │   ├── partial-analysis.js            # draws the partial-match word cloud
 │   ├── stats-analysis.js              # draws the statistics
+│   ├── theme-init.js                  # sets the light or dark theme before the first paint
 │   ├── utils.js                       # shared screen helpers (canvas setup, colours, loading)
 │   ├── wordcloud-analysis.js          # draws the word cloud
 │   └── wordcloud2.js                  # wordcloud2.js itself (bundled; left untouched)
@@ -439,6 +440,7 @@ passcloud/                             # the root of the application
 │   ├── readme.test.js                 # recomputes the tables and numbers in the README
 │   ├── stats.test.js                  # checks the statistics and the order of the top 10
 │   ├── text-processor.test.js         # checks the boundaries of loading and stem estimation
+│   ├── theme-init.test.js             # checks the initial theme and where it loads
 │   └── wordcloud-scale.test.js        # checks the size ordering and the notice when nothing was drawn
 ├── .gitignore                         # the Git ignore list
 ├── .nojekyll                          # turns Jekyll off on GitHub Pages

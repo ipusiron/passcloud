@@ -24,16 +24,11 @@ class PassCloudApp {
         this.checkWordCloudLibrary();
     }
 
-    // テーマ関連の初期化
+    // テーマ関連の初期化。最初のテーマは<head>のjs/theme-init.jsが描画前にdata-themeへ入れている。
+    // ここではアイコンを同期するだけ。
     initTheme() {
-        let savedTheme = 'light';
-        try {
-            savedTheme = localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
-        } catch {
-            // 保存先が使えなくても、テーマは画面内で切り替えられる。
-        }
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        this.updateThemeIcon(savedTheme);
+        const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+        this.updateThemeIcon(theme);
     }
 
     toggleTheme() {
