@@ -66,6 +66,7 @@ passcloud/                             # アプリケーションのルート
 │   ├── main.js                        # 画面の組み立て・ファイル入力・タブ切り替え・テーマ
 │   ├── partial-analysis.js            # 部分一致ワードクラウドの描画
 │   ├── stats-analysis.js              # 統計情報の描画
+│   ├── theme-init.js                  # 最初の描画の前に保存値からテーマを決める（<head> で同期読み込み）
 │   ├── utils.js                       # 画面まわりの共通処理（canvas 設定・配色・ローディング）
 │   ├── wordcloud-analysis.js          # ワードクラウドの描画
 │   └── wordcloud2.js                  # wordcloud2.js 本体（同梱。手を加えない）
@@ -82,6 +83,7 @@ passcloud/                             # アプリケーションのルート
 │   ├── readme.test.js                 # README の表と数値をコードで再計算して突き合わせる
 │   ├── stats.test.js                  # 統計の数値と Top10 の並びを検証する
 │   ├── text-processor.test.js         # 取り込みと語幹推定の境界値を検証する
+│   ├── theme-init.test.js             # テーマの初期判定と読み込み位置を検証する
 │   └── wordcloud-scale.test.js        # フォントサイズの上下限と、描けなかったときの知らせを検証する
 ├── .gitignore                         # Git の除外設定
 ├── .nojekyll                          # GitHub Pages の Jekyll 処理を無効にする
@@ -132,6 +134,7 @@ passcloud/                             # アプリケーションのルート
 - CSS custom properties defined in `css/base.css`
 - Theme stored in localStorage key `'theme'`
 - Toggle via `data-theme` attribute on `<html>`
+- The initial theme (`'dark'` if saved, otherwise light) is set before the first paint by `js/theme-init.js`, loaded synchronously in `<head>`; `main.js` only syncs the icon and handles the toggle
 - Each analysis module reads `PassCloudUtils.isDarkMode()` for colors
 
 ### Canvas Rendering Pattern

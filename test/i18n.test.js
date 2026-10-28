@@ -193,15 +193,17 @@ test('the UI scripts hold no wording of their own and judge no state by displaye
     }
 });
 
-test('the metadata is translated and i18n.js loads before every other script', () => {
+test('the metadata is translated and i18n.js loads before every other script but theme-init.js', () => {
     assert.equal((html.match(/data-i18n-content=/g) || []).length, 8);
     for (const name of ['description', 'keywords', 'og:title', 'og:description', 'og:site_name',
         'og:locale', 'twitter:title', 'twitter:description']) {
         assert.match(html, new RegExp('<meta [^>]*"' + name + '"[^>]*data-i18n-content='), name);
     }
     const scripts = [...html.matchAll(/<script src="([^"]+)"><\/script>/g)].map(match => match[1]);
-    assert.equal(scripts[0], 'js/i18n.js');
-    assert.equal(scripts.length, 13);
+    // theme-init.js は I18n を使わず、最初の描画の前にテーマを決めるため先頭に置く。
+    assert.equal(scripts[0], 'js/theme-init.js');
+    assert.equal(scripts[1], 'js/i18n.js');
+    assert.equal(scripts.length, 14);
     assert.ok(scripts.includes('js/main.js'));
 });
 
